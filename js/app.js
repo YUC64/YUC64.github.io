@@ -513,6 +513,64 @@ function toggleCart(open) {
   if (willOpen) renderCart();
 }
 
+/* ================================================================ 訂位驗證 */
+/** PBKDF2-SHA256 → hex（hashfile 模式用） */
+async function pbkdf2Hex(text, salt, iterations) {
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey('raw', enc.encode(text), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt: enc.encode(salt), iterations, hash: 'SHA-256' }, key, 256);
+  return [...new Uint8Array(bits)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+/**
+ * 檢查這支電話有沒有訂位。
+ *   mode='endpoint' → 呼叫 Google Apps Script（名單留在私有試算表，只回傳 ok/name）
+ *   mode='hashfile' → 讀公開雜湊檔比對（不需後端，但電話可被暴力反推，見 SETUP.md）
+ *   mode='off'      → 不驗證
+ * 驗證服務異常時依 CONFIG.reservation.onError 決定放行或擋下。
+ */
+async function verifyReservation(phone) {
+  const R = CFG.reservation || {};
+  const mode = R.mode || 'off';
+
+  if (mode === 'endpoint' && R.endpoint) {
+    try {
+      const sep = R.endpoint.includes('?') ? '&' : '?';
+      const res = await fetch(`${R.endpoint}${sep}phone=${encodeURIComponent(phone)}`, { method: 'GET' });
+      const data = await res.json();
+      return { ok: !!data.ok, verified: !!data.ok, name: data.name || '', mode, error: false };
+    } catch (err) {
+      console.warn('訂位驗證連線失敗', err);
+      return { ok: R.onError === 'allow', verified: false, name: '', mode, error: true };
+    }
+  }
+
+  if (mode === 'hashfile') {
+    try {
+      window.__resList = window.__resList
+        || fetch(R.hashFile || 'data/reservations.json').then((r) => r.json());
+      const list = await window.__resList;
+      const h = await pbkdf2Hex(phone, list.salt, list.iterations || 200000);
+      const hit = (list.entries || []).find((e) => e.h === h);
+      return { ok: !!hit, verified: !!hit, name: (hit && hit.n) || '', mode, error: false };
+    } catch (err) {
+      console.warn('訂位雜湊檔讀取失敗', err);
+      return { ok: R.onError === 'allow', verified: false, name: '', mode, error: true };
+    }
+  }
+
+  return { ok: true, verified: false, name: '', mode: 'off', error: false };
+}
+
+const verifyStateText = (u) => {
+  if (!u) return '';
+  if (u.verifyMode === 'off') return '<span class="text-amber-700">訂位驗證：未啟用（示範模式）</span>';
+  return u.verified
+    ? '<span class="text-thai-green">訂位已驗證 ✓</span>'
+    : '<span class="text-amber-700">未通過訂位驗證</span>';
+};
+
 /* ================================================================ 登入／會員 */
 function openLogin() {
   const u = S.user;
@@ -520,7 +578,7 @@ function openLogin() {
     <div class="flex items-start justify-between border-b border-ink/10 px-4 py-3">
       <div>
         <h3 class="text-lg font-black">手機號碼登入</h3>
-        <p class="text-[12px] text-ink-mute">登入後才能選購餐點，也可修改或取消自己的訂單</p>
+        <p class="text-[12px] text-ink-mute">需為<b>已訂位</b>的客人：請填訂位時留的手機號碼，登入後才能選購</p>
       </div>
       <button data-close-modal class="grid h-9 w-9 place-items-center rounded-full bg-ink/5">✕</button>
     </div>
@@ -541,21 +599,42 @@ function openLogin() {
         <input name="pin" required inputmode="numeric" maxlength="4" placeholder="例如 1234"
                class="mt-1 w-full rounded-xl border border-ink/15 px-3 py-2.5 text-sm tracking-[.4em] outline-none focus:border-ink">
       </label>
-      <button class="w-full rounded-full bg-siam-purple py-3 text-sm font-black text-white hover:bg-siam-dark">登入／註冊</button>
+      <div id="verifyMsg" class="hidden rounded-xl px-3 py-2 text-[12px] font-bold leading-relaxed"></div>
+      <button type="submit" class="w-full rounded-full bg-siam-purple py-3 text-sm font-black text-white hover:bg-siam-dark">登入／註冊</button>
       <p class="rounded-xl bg-amber-50 px-3 py-2 text-[11px] leading-relaxed text-amber-900">
         ⓘ 本網站無後端伺服器：帳號與訂單紀錄僅儲存在<b>這支裝置的瀏覽器</b>內（換裝置請重新登入）。
         為保護隱私，請勿使用您在別處使用過的密碼。
       </p>
     </form>`, {
     onMount: (root) => {
-      $('#loginForm', root).addEventListener('submit', (e) => {
+      $('#loginForm', root).addEventListener('submit', async (e) => {
         e.preventDefault();
         const f = e.target;
-        const name = f.name.value.trim();
+        const btn = $('button[type="submit"]', root);
+        let name = f.name.value.trim();
         const phone = f.phone.value.replace(/\D/g, '');
         const pin = f.pin.value.trim();
+        const msgBox = $('#verifyMsg', root);
         if (!/^09\d{8}$/.test(phone)) return toast('手機號碼格式錯誤（需 09 開頭 10 碼）');
         if (!/^\d{4}$/.test(pin)) return toast('密碼需為 4 位數字');
+
+        // 先驗證這支電話有沒有訂位（mode='off' 時直接通過）
+        btn.disabled = true;
+        const label = btn.textContent;
+        btn.textContent = '驗證訂位中…';
+        const v = await verifyReservation(phone);
+        btn.disabled = false;
+        btn.textContent = label;
+
+        if (!v.ok) {
+          msgBox.className = 'rounded-xl bg-thai-red/10 px-3 py-2 text-[12px] font-bold leading-relaxed text-thai-red';
+          msgBox.innerHTML = `查無此訂位電話。<br>請確認是訂位時留的手機號碼，或來電門市 ${esc(CFG.brand.phone || '')}。`;
+          return;
+        }
+        if (v.error) toast('訂位驗證服務暫時無法連線，先讓您繼續點餐（訂單會標記待確認）', 3600);
+        if (!name && v.name) name = v.name;
+        if (!name) return toast('請填寫姓名');
+
         const known = S.users[phone];
         if (known) {
           if (known.pin !== pin) return toast('密碼不正確');
@@ -564,7 +643,7 @@ function openLogin() {
           S.users[phone] = { name, pin };
         }
         save(LS.users, S.users);
-        S.user = { name, phone };
+        S.user = { name, phone, verified: v.verified, verifyMode: v.mode, verifyError: !!v.error };
         save(LS.user, S.user);
         const draft = S.draft;   // 若正在選套餐，登入後回到原畫面
         closeModal();
@@ -592,6 +671,7 @@ function renderMember() {
     <div class="min-w-0">
       <p class="font-black">${esc(S.user.name)} <span class="text-[11px] font-normal text-ink-mute">已登入・可以選購</span></p>
       <p class="text-[12px] text-ink-mute">${esc(S.user.phone)}・本機訂單 ${mine.length} 筆</p>
+      <p class="text-[12px]">${verifyStateText(S.user)}</p>
     </div>
     <div class="ml-auto flex gap-2">
       <button id="btnMyOrders" class="rounded-full bg-ink px-4 py-2 text-[12px] font-black text-white">我的訂單</button>
@@ -771,6 +851,9 @@ async function submitOrder(ev) {
   const { setLines, alcLines } = buildSummary();
   const orderId = S.editing || makeOrderId();
   const act = S.editing ? '修改訂單' : '新訂單';
+  // 未通過訂位驗證的訂單要標記，門市才知道要再核對
+  const resMode = (CFG.reservation && CFG.reservation.mode) || 'off';
+  const flag = resMode !== 'off' && !S.user.verified ? '[未通過訂位驗證] ' : '';
 
   const values = {
     orderId,
@@ -785,7 +868,7 @@ async function submitOrder(ev) {
     alacarteTotal: String(c.alcSubtotal),
     service: String(c.service),
     total: String(c.total),
-    note: note || '無',
+    note: flag + (note || '無'),
     ts: new Date().toLocaleString('zh-TW', { hour12: false }),
   };
 

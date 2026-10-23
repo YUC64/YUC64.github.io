@@ -11,6 +11,8 @@
 | 需求 | 實作 |
 |---|---|
 | 未登入只能看菜單 | 未登入時所有「加入」按鈕變成「登入後選購」，點擊會跳出登入視窗；購物車與結帳也都要求登入 |
+| 訂位客人才能點餐 | 用**訂位時留的手機號碼**登入時，會向 Google Apps Script 查核訂位名單（名單不外流）；查無訂位就擋下並顯示門市電話。可切換 `off`／`endpoint`／`hashfile` 三種模式 |
+| 員工專用頁 | 頁尾一個很小的「員工專用」連結 → `staff.html`：試算表入口、客人電話查詢、除夕當天流程。**不放密碼、不顯示客人資料**（真的資料都在權限受控的 Google 試算表）|
 | 手機號碼登入 | 手機號碼 + 姓名 + 自訂 4 位數密碼（存於該裝置 localStorage）；登入後才能選購與送出 |
 | 菜單展示 | 5 個春節套餐 + 42 道單點、12 個分類頁籤、卡片式排版，缺圖自動以品牌色卡片代替 |
 | 辣度標示 | 依 PDF 辣椒圖示數量顯示（🌶 微辣／🌶🌶 較辣），套餐選項、特選、單點與購物車都有標示 |
@@ -27,7 +29,9 @@
 ## 檔案結構
 
 ```
-index.html                  版面（Tailwind CDN + 少量自訂 CSS）
+index.html                  客人點餐頁（Tailwind CDN + 少量自訂 CSS）
+staff.html                  ★ 員工專用頁（頁尾小連結進入；不放密碼、不顯示客人資料）
+data/reservations.json      訂位名單雜湊檔（只有 hashfile 模式需要）
 assets/css/style.css        自訂樣式（晶片、數量按鈕、抽屜、動畫）
 assets/img/*.jpg            菜品圖片（50 張）+ credits.json 授權清單
 assets/img/logo.png         門市 LOGO（去背，淺色底用）
@@ -39,6 +43,7 @@ js/config.js                ← 唯一需要改的設定檔（品牌、規則、
 js/data.js                  菜單資料（套餐、單點、分類、辣度表、冰熱選項）
 js/app.js                   全部商業邏輯（購物車、登入、送出）
 tools/form-entry-ids.mjs    自動從 Google 表單網址抓出 entry.ID 並寫回 config.js
+tools/make-reservation-hashes.mjs  訂位名單 CSV → 公開雜湊檔（hashfile 模式用）
 scripts/fetch-images.py     從 Wikimedia Commons 抓免費授權菜品圖
 scripts/pick-candidates.py  多抓幾個候選圖做人工挑圖對照表
 scripts/render-pdf.ps1      用 Windows 內建 PDF API 把菜單 PDF 轉成高解析 PNG
@@ -71,7 +76,9 @@ node tools/form-entry-ids.mjs "https://docs.google.com/forms/d/e/XXXXX/viewform"
 ## 技術與限制（誠實說明）
 
 - **無後端、無金流**：款項現場結清；網站不處理付款。
-- **登入不是真正的身分驗證**：帳密只存在瀏覽器 localStorage，換裝置／清除資料即失效。要真正跨裝置登入需後端或 Google 帳號驗證。
+- **登入不是真正的身分驗證**：帳密只存在瀏覽器 localStorage，換裝置／清除資料即失效。要真正跨裝置登入需後端或 Google 帳號驗證。真正有把關的是「訂位驗證」那一層。
+- **訂位驗證一定要有一個「能私下查名單」的地方**：純前端做不到——把名單放進網站＝公開所有客人姓名電話。所以預設是 `mode:'off'`（任何電話都能登入），要用時得接 Apps Script（推薦）或公開雜湊檔（有被反推風險，SETUP.md 有實測估算）。沒接之前，網站等於沒有訂位管制。
+- **員工頁沒有密碼是故意的**：靜態網站藏不住密碼，硬塞一個只是自欺欺人。員工的權限改由 **Google 試算表的分享權限**控管（只有被分享的員工帳號開得起來），網站只放連結。
 - **Google 表單只能新增列、不能改列**：因此「修改訂單／取消訂單」是以**同一個訂單編號**再送出一筆、並在「動作」欄標記，門市請以同訂單編號的**最後一筆**為準（SETUP.md 附上可選的 Apps Script 版本，可做到真正的覆寫更新）。
 - **飲料加價升級**：菜單未公告價差，網站以 $0 記錄並寫進訂單內容，現場依公告價差計收。
 - **辣度**：完全對應 PDF 上的辣椒圖示數量（1 根＝微辣、2 根＝較辣），未標示者視為不辣。

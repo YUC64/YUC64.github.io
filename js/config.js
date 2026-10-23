@@ -38,6 +38,34 @@ window.CONFIG = {
   },
 
   // ---------------------------------------------------------------------------
+  // 員工專用頁（/staff.html）與訂位驗證設定
+  // ---------------------------------------------------------------------------
+  staff: {
+    // 訂位名單試算表：只分享給員工的 Google 帳號（不要把連結公開）
+    sheetUrl: '',
+    // 訂單回應試算表（Google 表單回應匯集處）
+    ordersSheetUrl: '',
+    // 值班電話（員工頁顯示）
+    dutyPhone: '',
+  },
+
+  reservation: {
+    // off       = 不驗證，任何電話都能登入點餐（尚未設定的預設值）
+    // endpoint  = 呼叫 Google Apps Script 驗證（推薦，名單不外流）
+    // hashfile  = 讀取公開的雜湊檔驗證（不需後端，但電話可被暴力反推，見 SETUP.md）
+    mode: 'off',
+    // mode='endpoint' 時的 Apps Script Web App 網址（結尾 /exec）
+    endpoint: '',
+    // mode='hashfile' 時的雜湊檔路徑
+    hashFile: 'data/reservations.json',
+    // 驗證服務異常（斷線／Apps Script 掛掉）時：allow = 先讓客人點（訂單會標記未驗證）
+    //                                        block = 擋下並請客人來電
+    onError: 'allow',
+    // 通過驗證後是否要求客人自行填寫姓名
+    askName: true,
+  },
+
+  // ---------------------------------------------------------------------------
   // Google 表單設定
   //   form.action : 表單的 /formResponse 網址
   //   form.entries: 欄位 -> entry.ID（例如 'entry.1234567890'）

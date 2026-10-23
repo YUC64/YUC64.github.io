@@ -106,6 +106,108 @@ function doPost(e) {
 
 ---
 
+## 讓「客人用電話登入」時驗證訂位（推薦做法）
+
+需求：**只有訂位的客人**能用電話登入點餐。純前端做不到「私下查名單」——把名單放進網站等於公開全部客人的姓名電話。所以用一支免費的 Google Apps Script 當查詢窗口：名單留在**私有試算表**，只回傳「這支電話有沒有訂位」。
+
+### 1. 建訂位名單試算表
+
+- 新增 Google 試算表，工作表名稱設為 `訂位名單`（或改程式裡的 `SHEET_NAME`）。
+- 第一列標題：`姓名` | `電話`（可再加「人數」「桌號」「已報到」）。
+- 電話統一寫 `09xxxxxxxx`（程式也會自動處理 `+886912345678`）。
+- **分享權限只給員工的 Google 帳號**，千萬不要設成「知道連結的任何人」。
+
+### 2. 試算表 → 擴充功能 → Apps Script，貼上：
+
+```javascript
+const SHEET_NAME = '訂位名單';
+
+function json(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+function norm(v) {                                  // 0912-345-678 / +886912345678 → 0912345678
+  const d = String(v || '').replace(/\D/g, '');
+  if (/^8869\d{8}$/.test(d)) return '0' + d.slice(3);
+  if (/^9\d{8}$/.test(d)) return '0' + d;
+  return d;
+}
+
+function doGet(e) {
+  const phone = norm(e && e.parameter ? e.parameter.phone : '');
+  if (!/^09\d{8}$/.test(phone)) return json({ ok: false, error: 'bad_phone' });
+
+  // 節流：同一支電話每分鐘最多查 10 次（避免被拿來逐一試探名單）
+  const cache = CacheService.getScriptCache();
+  const key = 'q' + phone;
+  const n = Number(cache.get(key) || 0);
+  if (n >= 10) return json({ ok: false, error: 'rate_limited' });
+  cache.put(key, String(n + 1), 60);
+
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME)
+             || SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
+  const rows = sheet.getDataRange().getValues();
+  if (!rows.length) return json({ ok: false, error: 'empty_sheet' });
+  const head = rows.shift().map(function (h) { return String(h).trim(); });
+  const pi = head.findIndex(function (h) { return /電話|手機|phone|tel/i.test(h); });
+  const ni = head.findIndex(function (h) { return /姓名|名字|name/i.test(h); });
+  if (pi < 0) return json({ ok: false, error: 'no_phone_column' });
+
+  for (var i = 0; i < rows.length; i++) {
+    if (norm(rows[i][pi]) === phone) {
+      return json({ ok: true, name: ni >= 0 ? String(rows[i][ni] || '') : '' });
+    }
+  }
+  return json({ ok: false });
+}
+
+// 想更嚴謹可改成「電話 + 姓名」同時符合才算通過：
+// 前端只要多帶一個 &name= 參數，這裡再多比對一個欄位即可。
+```
+
+### 3. 部署
+
+- 右上「部署」→「新增部署作業」→ 類型選 **網頁應用程式**
+- 執行身分：**我**；誰可以存取：**任何人**（客人的瀏覽器要能匿名查詢）
+- 複製結尾是 `/exec` 的網址
+
+### 4. 填回網站設定
+
+```javascript
+// js/config.js
+reservation: {
+  mode: 'endpoint',
+  endpoint: 'https://script.google.com/macros/s/AKfycb.../exec',
+  onError: 'allow',   // 驗證服務掛掉時先讓客人點（訂單會標記待確認）
+},
+staff: {
+  sheetUrl: '訂位名單的試算表網址',        // 員工頁的「開啟」按鈕（Google 會用帳號擋權限）
+  ordersSheetUrl: '表單回應的試算表網址',
+},
+```
+
+之後客人輸入手機號碼 → 網站問 Apps Script → Apps Script 查私有試算表 → 只回傳 `{ok:true}` →
+通過才能選購。**名單一筆都不會出現在網站上**，`/staff.html` 的查詢工具也共用同一個來源。
+
+### 已知限制（老實說）
+
+- 這個 `/exec` 網址是公開的，所以任何人可以拿電話號碼來「問有沒有訂位」→ 屬於可被逐一試探的風險（不會一次拿到整份名單）。程式已加節流；要更嚴謹就改成「電話＋姓名」都比對。
+- Apps Script 免費額度：每天 20,000 次執行、同時 30 個，一個晚上的活動非常夠用。
+- **掛掉時**：`onError: 'allow'` 會先讓客人點餐並在訂單備註標記 `[未通過訂位驗證]`，門市現場再人工核對；`'block'` 則直接擋下並請客人來電。除夕當天建議用 `allow`，免得整晚收不到單。
+
+### 替代方案：不需要任何後端的 `hashfile` 模式
+
+```bash
+node tools/make-reservation-hashes.mjs 訂位名單.csv --iterations 200000
+# → 產生 data/reservations.json（只有雜湊，預設不含姓名）
+```
+再把 `reservation.mode` 設成 `'hashfile'`。**但風險要知道**：檔案公開在 GitHub Pages，
+而台灣手機號碼只有 `09xxxxxxxx` 一種格式（約 1 億組），用一張高階顯示卡搭配 PBKDF2 20 萬次迭代，
+**估計數十分鐘內就能反推出全部號碼**。所以這只適合「完全不想碰 Apps Script、且可接受風險」的情況，
+而且名單每次異動都要重新產生檔案並重新 push。
+
+---
+
 ## 其他設定（`js/config.js`）
 
 | 設定 | 說明 |
