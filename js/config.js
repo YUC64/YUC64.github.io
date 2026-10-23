@@ -10,7 +10,7 @@ window.CONFIG = {
     enName: 'EAT THAI, FEEL HIGH!',
     year: '2027',
     subtitle: '春節內用年菜・線上預先點餐',
-    phone: '02-0000-0000',        // ← 改成店內電話（顯示於頁尾與確認頁）
+    phone: '',                     // ← 待填：門市電話（留空時畫面顯示「洽門市人員」，不會出現假號碼）
     address: '',                   // ← 可填門市地址
   },
 
