@@ -1,0 +1,77 @@
+/* =============================================================================
+ *  饗泰多 2027 春節預訂 — 自訂樣式（搭配 Tailwind CDN）
+ * ========================================================================== */
+
+:root {
+  --brand: #FFD400;
+  --ink: #141414;
+}
+
+html { scroll-behavior: smooth; }
+
+body { -webkit-tap-highlight-color: transparent; }
+
+/* 隱藏橫向捲動條（分類頁籤） */
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* 卡片進場 */
+.card-enter { animation: cardIn .28s ease both; }
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* 購物車面板 */
+#cartPanel.open { transform: translateX(0); }
+
+/* 數量控制器 */
+.qty-btn {
+  display: grid; place-items: center;
+  width: 30px; height: 30px; border-radius: 9999px;
+  font-weight: 900; line-height: 1;
+  background: #141414; color: #fff;
+  transition: transform .12s ease, background .15s ease;
+}
+.qty-btn:hover { background: #000; }
+.qty-btn:active { transform: scale(.9); }
+.qty-btn[disabled] { background: #D9D9D9; color: #8A8A8A; cursor: not-allowed; }
+
+/* 選項晶片 */
+.chip {
+  display: inline-flex; align-items: center; gap: .35rem;
+  border: 1.5px solid rgba(20,20,20,.14); background: #fff;
+  border-radius: 9999px; padding: .34rem .7rem;
+  font-size: .8rem; font-weight: 700; cursor: pointer;
+  transition: all .15s ease;
+}
+.chip:hover { border-color: #141414; }
+.chip.on { background: var(--ink); border-color: var(--ink); color: #fff; }
+.chip.on::before { content: "✓"; font-size: .72rem; }
+.chip.dim { opacity: .45; }
+
+/* 套餐選配區塊 */
+.group-box { border-radius: 14px; background: #F7F4EC; padding: .7rem .8rem; }
+.group-box .group-head { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
+.group-box.bad { background: #FDECEA; outline: 1.5px solid #D8372C; }
+
+/* 圖片缺失時的浮水印替代 */
+.img-fallback {
+  background:
+    radial-gradient(circle at 30% 20%, rgba(255,212,0,.85), rgba(255,212,0,0) 60%),
+    linear-gradient(135deg, #2B2B2B 0%, #4A4A4A 100%);
+  color: #FFD400;
+}
+
+/* 成功打勾動畫 */
+.tick { animation: pop .4s cubic-bezier(.2,1.4,.5,1) both; }
+@keyframes pop { from { transform: scale(.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+/* 固定底部列存在時的最後一段留白 */
+@media (max-width: 639px) { main { padding-bottom: 7rem; } }
+
+/* 減少動態偏好 */
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+  html { scroll-behavior: auto; }
+}

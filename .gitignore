@@ -1,0 +1,5 @@
+candidates/
+__pycache__/
+*.tmp
+.DS_Store
+Thumbs.db
