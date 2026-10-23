@@ -1,269 +1,153 @@
-# SETUP — 接上 Google 表單（5 分鐘）
+# SETUP — 接上 Google（不用 Google 表單，5 分鐘）
 
-> 2027 除夕版新增：`js/data.js` 多了辣度表（`SPICY`）與冰／去冰／熱選項（`TEMPS`）；
-> 登入後才能選購；LOGO 與辣椒圖示放在 `assets/img/`。這些都不影響表單設定流程。
+## 架構：一支 Apps Script 當資料庫 API
 
-網站沒有任何後端，訂單是「假裝有人填 Google 表單」送出的：前端用 `fetch()` 把購物車內容 POST 到表單的
-`/formResponse`，並用 `entry.xxxxx` 對應每個題目。所以只要做兩件事：**建表單** → **把 entry.ID 填進 `js/config.js`**。
+```
+[訂位表]  Google 試算表（私有，只有員工能開）
+  姓名 ｜ 電話 ｜ 驗證碼 ｜ 人數 ｜ 桌號 ｜ 已報到      ← 員工維護，驗證碼可用腳本自動產生
+
+[訂單表]  Google 試算表（自動建立）
+  訂單編號 ｜ 狀態 ｜ 動作 ｜ 姓名 ｜ 電話 ｜ 預計取餐時間 ｜ 用餐人數 ｜
+  套餐內容 ｜ 套餐金額 ｜ 單點內容 ｜ 單點金額 ｜ 服務費 ｜ 總金額 ｜ 備註 ｜ 最後更新
+  ↑ 以「訂單編號」為 key：客人改單會覆蓋同一列，不會多出一筆
+
+        ▲                                  ▲
+        │ GET ?phone=&code=                │ POST（新增／修改／取消）
+        │ 只回傳 {ok, name}                │ 需通過電話＋驗證碼驗證
+   ┌────┴──────────────────────────────────┴────┐
+   │        Apps Script 網頁應用程式 /exec       │
+   └────┬──────────────────────────────────┬────┘
+        │                                  │
+  [客人網站] 訂位登入 → 點餐 → 送出      [員工頁 /staff.html] 查訂位
+```
+
+**為什麼不用 Google 表單**：表單只能「新增列」，客人改單會變成兩筆、門市要自己判斷哪筆最新；
+而且前端看不到回應，送出成功失敗都不知道。改成 Apps Script 直接寫入後，改單是真的覆蓋同一列，
+送出後還能拿到「已更新第 5 列」這種確認。
 
 ---
 
-## 步驟 1：建立 Google 表單
+## 步驟 1：貼上腳本
 
-1. 開 <https://forms.google.com> → 空白表單，標題例如「饗泰多 2027 春節內用訂單」。
-2. 依下表建立題目，**全部選「簡答題」**，標題文字要一模一樣（程式是靠標題自動對應的）：
+開你的「訂位表」→ **擴充功能 → Apps Script** → 把
+[`scripts/google-apps-script/Code.gs`](scripts/google-apps-script/Code.gs) 整份貼進 `Code.gs`（蓋掉原本內容）→ 存檔。
 
-| # | 題目標題 | 用途 |
-|---|---|---|
-| 1 | 訂單編號 | 例如 XT2701251830123 |
-| 2 | 動作 | 新訂單／修改訂單／取消訂單 |
-| 3 | 姓名 | |
-| 4 | 手機號碼 | |
-| 5 | 預計取餐時間 | 2027-02-18 18:30 |
-| 6 | 用餐人數 | |
-| 7 | 套餐內容 | 套餐＋所有選項的完整文字 |
-| 8 | 套餐金額 | |
-| 9 | 單點內容 | |
-| 10 | 單點金額 | |
-| 11 | 服務費 | 10% |
-| 12 | 總金額 | 套餐＋單點＋服務費 |
-| 13 | 備註 | 客人填的備註 |
-| 14 | 送出時間 | |
+（線上直接複製：`https://raw.githubusercontent.com/Yuchen0614/eatthai-newyear-preorder/main/scripts/google-apps-script/Code.gs`）
 
-> 訂單內容字串會包含冰熱與辣度資訊，例如
-> `春節四人套餐 x1 [涼拌:酸辣海鮮涼拌 … | 飲料:泰式奶茶(冰)/泰式奶茶(熱)…]`、`摩摩喳喳(去冰) x1`。
+## 步驟 2：執行 setupAll
 
-3. 表單右上「傳送」→ 連結 → **勾選「縮短網址」與「知道連結的任何人可以回覆」** → 複製連結。
+函式選單選 **`setupAll`** → 執行 → 第一次會要求授權（選你的帳號 → 進階 → 前往 → 允許）。
 
-> 想改題目順序可以，但**標題文字**必須與上表一致；若要改標題，請同步修改
-> `js/config.js` 裡的 `formFieldTitles`。
+它會做這些事：
 
-## 步驟 2：自動填入 entry.ID
+| 動作 | 說明 |
+|---|---|
+| 訂位表加上欄位 | `姓名｜電話｜驗證碼｜人數｜桌號｜已報到`，電話與驗證碼設為**純文字**（避免 `0912345678` 變成 `9.12E+08`）|
+| 自動產生驗證碼 | 幫「有姓名電話但沒有驗證碼」的列產生不重複的 4 位數驗證碼 |
+| 建立訂單表 | 開一份「饗泰多 除夕預點餐 訂單」試算表＋欄位（重複執行不會再開新檔）|
+| 回報結果 | 執行紀錄會列出每一步 ✅／⚠ |
 
-```bash
-node tools/form-entry-ids.mjs "https://docs.google.com/forms/d/e/1FAIpQLS.../viewform" --write
-```
+> 之後新增訂位：在「訂位名單」貼上**姓名、電話**兩欄 → 再執行 `fillCodes()`（函式選單可選）→
+> 驗證碼就自動產生。把驗證碼發給客人（簡訊／LINE），那就是他的登入碼。想自己指定驗證碼也可以直接打。
 
-工具會抓取表單頁面、解析 `FB_PUBLIC_LOAD_DATA_`、依標題對應 14 個欄位，並直接改寫 `js/config.js` 的
-`form.action` 與 `form.entries`。輸出長這樣：
+## 步驟 3：部署成網頁應用程式
 
-```
-對應結果（14/14）：
-  ✓ orderId      entry.1234567890
-  ✓ action       entry.1234567891
-  ...
-✓ 已寫入 js/config.js
-```
+Apps Script 右上 **部署 → 新增部署作業 → 類型：網頁應用程式**
 
-（不加 `--write` 只會印出設定內容讓你自己貼。若顯示 `✗ 未對應到` 表示那個題目標題不同或漏建。）
+- 說明：隨便填（例如 `v1`）
+- **執行身分：我**（這樣腳本才能讀寫你私有的試算表）
+- **誰可以存取：任何人**（客人的瀏覽器要能匿名呼叫）
 
-**手動作法**：在表單右上「⋮ → 取得預先填入的連結」，隨便填一個答案後按「取得連結」，
-網址中 `entry.1234567890=...` 的數字就是 entry ID；`form.action` 則是把連結的 `/viewform`
-換成 `/formResponse`。
+→ 部署 → 複製結尾是 **`/exec`** 的網址。
 
-## 步驟 3：收單到 Google 試算表
-
-表單「回應」分頁 → 綠色試算表圖示 → 「連結至試算表」→ 建立。之後每筆訂單都會變成一列。
-
-### 建議：讓試算表只看「最新版本」的訂單
-
-Google 表單只能**新增列**，不能修改既有列，所以「修改訂單／取消訂單」會是同一訂單編號的新的一列。
-最簡單的處理方式：在試算表新增一個工作表，用公式取每個訂單編號的最後一列，例如：
-
-```
-=FILTER('表單回應 1'!A:N, '表單回應 1'!B:B = "新訂單")
-```
-
-或直接用資料透視／排序功能，依「送出時間」由新到舊排序，出餐時看同編號最上面那筆。
-
-### （可選）用 Apps Script 做到真正的「覆寫更新」
-
-如果你希望修改訂單時是**更新原本那一列**而不是新增一列，把 `js/config.js` 的 `form.action`
-改成你自己的 Apps Script Web App 網址即可（前端程式完全不用改，因為它只是 POST 表單資料）：
-
-```javascript
-// Google 試算表 → 擴充功能 → Apps Script → 貼上 → 部署為網頁應用程式（存取權：任何人）
-function doPost(e) {
-  const sheet = SpreadsheetApp.getActiveSheet();
-  const p = e.parameter;                      // 欄位名稱 = entry.ID，需自行改成語意名稱
-  const rows = sheet.getDataRange().getValues();
-  for (let i = rows.length - 1; i >= 1; i--) {
-    if (String(rows[i][0]) === p.orderId) {   // 找到同訂單編號 → 覆寫該列
-      sheet.getRange(i + 1, 1, 1, 14).setValues([[
-        p.orderId, p.action, p.name, p.phone, p.pickup, p.headcount,
-        p.sets, p.setsTotal, p.alacarte, p.alacarteTotal, p.service, p.total, p.note, p.ts,
-      ]]);
-      return ContentService.createTextOutput('updated');
-    }
-  }
-  sheet.appendRow([p.orderId, p.action, p.name, p.phone, p.pickup, p.headcount,
-    p.sets, p.setsTotal, p.alacarte, p.alacarteTotal, p.service, p.total, p.note, p.ts]);
-  return ContentService.createTextOutput('appended');
-}
-```
-
-> 注意：這已經算是「有後端」了，若作業要求是純 Google 表單，就維持預設做法。
-
----
-
-## 讓「客人用電話登入」時驗證訂位（推薦做法）
-
-需求：**只有訂位的客人**能用電話登入點餐。純前端做不到「私下查名單」——把名單放進網站等於公開全部客人的姓名電話。所以用一支免費的 Google Apps Script 當查詢窗口：名單留在**私有試算表**，只回傳「這支電話有沒有訂位」。
-
-### 1. 建訂位名單試算表
-
-- 新增 Google 試算表，工作表名稱設為 `訂位名單`（或改程式裡的 `SHEET_NAME`）。
-- 第一列標題：`姓名` | `電話`（可再加「人數」「桌號」「已報到」）。
-- 電話統一寫 `09xxxxxxxx`（程式也會自動處理 `+886912345678`）。
-- **分享權限只給員工的 Google 帳號**，千萬不要設成「知道連結的任何人」。
-
-### 2. 試算表 → 擴充功能 → Apps Script，貼上程式
-
-**直接用現成的完整腳本：`scripts/google-apps-script/Code.gs`**（比下面這段精簡版多做很多事）：
-
-- `setupAll()`：自動把訂位表加上標題列與格式（電話設為純文字）、
-  把現有表單改成 14 個訂單題目並發布、建立回應試算表、**印出所有 entry.ID** 並寫成一個
-  「網站設定（複製給 Hermes）」分頁。
-- `doGet(e)`：訂位驗證 API（就是下面這一段）。
-
-在 Apps Script 編輯器把 `Code.gs` 內容整個貼進去 → 函式選 `setupAll` → 執行 → 授權。
-第一次執行完，把「網站設定」分頁的內容貼回給網站維護者即可。
-
-> 下面是 `doGet` 的精簡版，方便理解驗證邏輯（`Code.gs` 內已包含同一份邏輯，還多了節流與除錯函式）。
-
-```javascript
-const SHEET_NAME = '訂位名單';
-
-function json(obj) {
-  return ContentService.createTextOutput(JSON.stringify(obj))
-    .setMimeType(ContentService.MimeType.JSON);
-}
-function norm(v) {                                  // 0912-345-678 / +886912345678 → 0912345678
-  const d = String(v || '').replace(/\D/g, '');
-  if (/^8869\d{8}$/.test(d)) return '0' + d.slice(3);
-  if (/^9\d{8}$/.test(d)) return '0' + d;
-  return d;
-}
-
-function doGet(e) {
-  const phone = norm(e && e.parameter ? e.parameter.phone : '');
-  if (!/^09\d{8}$/.test(phone)) return json({ ok: false, error: 'bad_phone' });
-
-  // 節流：同一支電話每分鐘最多查 10 次（避免被拿來逐一試探名單）
-  const cache = CacheService.getScriptCache();
-  const key = 'q' + phone;
-  const n = Number(cache.get(key) || 0);
-  if (n >= 10) return json({ ok: false, error: 'rate_limited' });
-  cache.put(key, String(n + 1), 60);
-
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME)
-             || SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
-  const rows = sheet.getDataRange().getValues();
-  if (!rows.length) return json({ ok: false, error: 'empty_sheet' });
-  const head = rows.shift().map(function (h) { return String(h).trim(); });
-  const pi = head.findIndex(function (h) { return /電話|手機|phone|tel/i.test(h); });
-  const ni = head.findIndex(function (h) { return /姓名|名字|name/i.test(h); });
-  if (pi < 0) return json({ ok: false, error: 'no_phone_column' });
-
-  for (var i = 0; i < rows.length; i++) {
-    if (norm(rows[i][pi]) === phone) {
-      return json({ ok: true, name: ni >= 0 ? String(rows[i][ni] || '') : '' });
-    }
-  }
-  return json({ ok: false });
-}
-
-// 想更嚴謹可改成「電話 + 姓名」同時符合才算通過：
-// 前端只要多帶一個 &name= 參數，這裡再多比對一個欄位即可。
-```
-
-### 3. 部署
-
-- 右上「部署」→「新增部署作業」→ 類型選 **網頁應用程式**
-- 執行身分：**我**；誰可以存取：**任何人**（客人的瀏覽器要能匿名查詢）
-- 複製結尾是 `/exec` 的網址
-
-### 4. 填回網站設定
+## 步驟 4：貼進網站設定
 
 ```javascript
 // js/config.js
+api: { endpoint: 'https://script.google.com/macros/s/AKfycb.../exec' },
+
 reservation: {
-  mode: 'endpoint',
-  endpoint: 'https://script.google.com/macros/s/AKfycb.../exec',
-  onError: 'allow',   // 驗證服務掛掉時先讓客人點（訂單會標記待確認）
+  mode: 'endpoint',      // 用 Apps Script 驗證「電話＋驗證碼」
+  requireCode: true,
+  onError: 'allow',      // 腳本掛掉時先讓客人點（訂單會標記待確認）
 },
+
+ordersWrite: {
+  mode: 'apps-script',   // 直接寫入試算表（可真正改單）
+},
+
 staff: {
-  sheetUrl: '訂位名單的試算表網址',        // 員工頁的「開啟」按鈕（Google 會用帳號擋權限）
-  ordersSheetUrl: '表單回應的試算表網址',
+  sheetUrl: '訂位表的網址',        // 員工頁的開啟按鈕（權限由 Google 帳號控管）
+  ordersSheetUrl: '訂單表的網址',
+  dutyPhone: '當班電話',
 },
 ```
 
-之後客人輸入手機號碼 → 網站問 Apps Script → Apps Script 查私有試算表 → 只回傳 `{ok:true}` →
-通過才能選購。**名單一筆都不會出現在網站上**，`/staff.html` 的查詢工具也共用同一個來源。
+改完 push 上 GitHub Pages 即生效（`git add -A && git commit -m config && git push`）。
 
-### 已知限制（老實說）
+## 步驟 5：自己測一遍（很重要）
 
-- 這個 `/exec` 網址是公開的，所以任何人可以拿電話號碼來「問有沒有訂位」→ 屬於可被逐一試探的風險（不會一次拿到整份名單）。程式已加節流；要更嚴謹就改成「電話＋姓名」都比對。
-- Apps Script 免費額度：每天 20,000 次執行、同時 30 個，一個晚上的活動非常夠用。
-- **掛掉時**：`onError: 'allow'` 會先讓客人點餐並在訂單備註標記 `[未通過訂位驗證]`，門市現場再人工核對；`'block'` 則直接擋下並請客人來電。除夕當天建議用 `allow`，免得整晚收不到單。
+在 Apps Script 編輯器執行 **`selfTest()`**：它會假造一筆訂位與訂單，驗證
+「錯誤驗證碼被拒 → 正確驗證碼通過 → 新增訂單 → 改單是 updated 而不是新增」整條流程。
+測完把測試資料那兩列刪掉即可。
 
-### 替代方案：不需要任何後端的 `hashfile` 模式
+網站端也可以離線測（不需要 Google 帳號）：
 
 ```bash
-node tools/make-reservation-hashes.mjs 訂位名單.csv --iterations 200000
-# → 產生 data/reservations.json（只有雜湊，預設不含姓名）
+python scripts/mock-apps-script.py 8770     # 模擬 doGet/doPost
+# 瀏覽器 console：
+#   CONFIG.api.endpoint='http://127.0.0.1:8770/exec'
+#   CONFIG.reservation.mode='endpoint'; CONFIG.ordersWrite.mode='apps-script'
+# 測試帳號：0912345678 / 1234（王小明）、0987654321 / 5678（陳大文）
 ```
-再把 `reservation.mode` 設成 `'hashfile'`。**但風險要知道**：檔案公開在 GitHub Pages，
-而台灣手機號碼只有 `09xxxxxxxx` 一種格式（約 1 億組），用一張高階顯示卡搭配 PBKDF2 20 萬次迭代，
-**估計數十分鐘內就能反推出全部號碼**。所以這只適合「完全不想碰 Apps Script、且可接受風險」的情況，
-而且名單每次異動都要重新產生檔案並重新 push。
 
 ---
 
-## 其他設定（`js/config.js`）
+## 客人流程 vs 員工流程
 
-| 設定 | 說明 |
+**客人**：輸入手機號碼＋姓名＋驗證碼 → 通過才能點餐 → 送出後拿到訂單編號 → 之後用同樣三項登入即可
+在「我的訂單」修改／取消（改單直接覆蓋門市試算表同一列）。
+
+**員工**：在「訂位名單」加姓名電話 → 跑 `fillCodes()` → 發驗證碼給客人。
+除夕當天在 `/staff.html` 查客人電話＋驗證碼是否有效，再到訂單表用訂單編號查餐點。
+
+## 資安與個資（老實說）
+
+- **名單不會外流**：網站只會呼叫 `?phone=&code=`，伺服器回傳 `{ok, name}` 或錯誤碼，
+  不會、也不能回傳整份名單。訂位表請維持**只有員工能開**。
+- **驗證碼是唯一憑證**：4 位數＝1 萬種可能。腳本已加節流（同一支電話每小時最多錯 8 次，
+  超過回 `too_many_attempts`），要更安全可把 `CODE_LENGTH` 改成 6。
+  驗證碼**不要跟姓名一起公開**（例如貼在群組），知道電話＋驗證碼就能改那筆訂單。
+- **`/exec` 網址是公開的**（客人的瀏覽器要能呼叫）。但沒有有效「電話＋驗證碼」就寫不進任何資料，
+  這比 Google 表單（任何人知道表單網址就能塞假單）安全一個層級。
+- 訂單表存的是姓名＋電話＋餐點＝**個資**。活動結束建議：刪除或限制分享權限、必要時刪除資料。
+- 腳本會清洗欄位（截長度、去掉開頭的 `=`、`+`、`-`、`@`），避免有人用公式注入試算表。
+
+## 費用與限制
+
+| 項目 | 說明 |
 |---|---|
-| `brand.phone` / `brand.address` | 顯示在頁尾與訂購成功畫面；**記得改成門市電話** |
-| `orders.deadline` | 收單截止時間（ISO），過期後頁面顯示截止提示 |
-| `orders.openFrom` / `openTo` | 日期選擇器的可選範圍 |
-| `orders.timeSlots` | 預計取餐時段清單 |
-| `rules.serviceChargeRate` | 服務費比例（0.1 = 10%） |
-| `rules.minSpendPerPerson` | 每人最低消費（600），未達標時購物車會警示 |
-| `rules.requireSetBeforeAlcarte` | 是否強制「先點套餐才能單點」（預設 true） |
+| 費用 | 全部免費（Apps Script 每天 20,000 次執行、同時 30 個；一晚的活動用量極小）|
+| 速度 | 每次呼叫約 0.5～2 秒（冷啟動較久）——點餐送出時會顯示「傳送中…」 |
+| 掛掉時 | `reservation.onError:'allow'` 會先讓客人點並在備註標記 `[未通過訂位驗證]`；`'block'` 則擋下並請客人來電 |
+| 改驗證規則 | 改 `Code.gs` 後要**重新部署**（部署 → 管理部署作業 → 編輯 → 版本：新版本）|
 
-## 換菜品圖片
+## 疑難排解
 
-把 `assets/img/<key>.jpg` 直接覆蓋即可（檔名對應見 `js/data.js` 的 `IMG('key')`）。
-圖片會自動以 4:3 裁切；若某張圖不存在，卡片會自動顯示品牌色替代樣式，不會破圖。
+| 症狀 | 原因／處理 |
+|---|---|
+| 登入一直說「查無此訂位資料」 | 電話不在名單、或名單的電話格式不對（腳本會自動處理 `+886912345678`，但請避免全形數字）|
+| 一直說驗證碼錯誤 | 驗證碼欄位是純文字，注意前導 0（`0123`）；確認客人拿到的就是名單上那組 |
+| 回 `too_many_attempts` | 該電話 1 小時內錯超過 8 次，等 1 小時或請客人來電 |
+| 送出失敗「載入失敗」 | 通常是 `/exec` 網址沒填對、或部署時「誰可以存取」沒設**任何人** |
+| 改了腳本但行為沒變 | 要建立**新版本**的部署才會生效（見上表）|
+| 想看即時訂單 | 直接開訂單表；或執行 `listOrders('0912345678')` |
 
-重新從 Wikimedia Commons 抓圖（免費授權，並自動更新 `credits.json`）：
+---
 
-```bash
-python scripts/fetch-images.py            # 抓缺的
-python scripts/fetch-images.py --force     # 全部重抓
-python scripts/pick-candidates.py          # 產生候選圖對照表 candidates/sheet_*.png 供挑圖
-```
+## 附錄：舊做法（Google 表單）— 只在不想用 Apps Script 時才需要
 
-把菜單 PDF 轉成高解析圖片（Windows 內建 API，方便核對辣度或做素材）：
-
-```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/render-pdf.ps1 `
-  -Pdf "C:\path\menu.pdf" -OutDir "C:\path\pages" -Scale 2.2
-```
-
-## 部署到 GitHub Pages
-
-```bash
-git add -A && git commit -m "update" && git push
-gh api -X POST repos/<帳號>/<repo>/pages -f 'source[branch]=main' -f 'source[path]=/'
-```
-
-網站是純靜態檔案，推到 `main` 之後 GitHub Pages 會自動重新部署（約 30–60 秒）。
-
-## 常見問題
-
-- **送出後試算表沒東西？** 表單權限必須是「知道連結的任何人可以回覆」；`form.action` 必須是 `/formResponse` 結尾；
-  entry ID 必須是同一份表單的（表單重新建立後 ID 會變，要重跑工具）。
-- **按「送出」只在本機看到訂單？** 那是示範模式：`js/config.js` 的 `form.action` 還是空的。
-- **換手機看不到自己的訂單？** 純前端限制，本機 localStorage 才有紀錄。請保留訂單編號，或改用上面的 Apps Script 版本。
+專案仍保留 Google 表單模式（`ordersWrite.mode = 'google-form'`）：把 14 個題目建好後
+執行 `node tools/form-entry-ids.mjs "<表單網址>" --write` 會自動填入 `form.action` 與 `entry.ID`。
+但**該模式只能新增列、前端收不到回應**，改單會變成兩筆，門市需自行取同訂單編號的最新一筆。
+除非有特殊理由，建議使用上面的 Apps Script 模式。

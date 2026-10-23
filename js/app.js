@@ -514,7 +514,12 @@ function toggleCart(open) {
   if (willOpen) renderCart();
 }
 
-/* ================================================================ 訂位驗證 */
+/* ================================================================ 訂位驗證 / 訂單 API */
+const API_BASE = () => String((CFG.api && CFG.api.endpoint) || '').trim();
+const apiReady = () => API_BASE().length > 0;
+const needVerifyCode = () => (CFG.reservation || {}).mode === 'endpoint'
+  && (CFG.reservation || {}).requireCode !== false && apiReady();
+
 /** PBKDF2-SHA256 → hex（hashfile 模式用） */
 async function pbkdf2Hex(text, salt, iterations) {
   const enc = new TextEncoder();
@@ -524,26 +529,51 @@ async function pbkdf2Hex(text, salt, iterations) {
   return [...new Uint8Array(bits)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
+/** 把 Apps Script 回傳的錯誤碼翻成人話 */
+const verifyErrorText = (data) => {
+  switch (data && data.error) {
+    case 'bad_code':
+      return `驗證碼錯誤${data.remaining != null ? `（還可嘗試 ${data.remaining} 次）` : ''}`;
+    case 'not_found':
+      return '查無此訂位資料，請確認是訂位時留的手機號碼';
+    case 'too_many_attempts':
+      return '嘗試次數過多，請 1 小時後再試，或直接來電門市';
+    case 'need_code':
+      return '請輸入門市提供的驗證碼';
+    case 'bad_phone':
+      return '手機號碼格式錯誤';
+    default:
+      return '訂位驗證失敗，請稍後再試或來電門市';
+  }
+};
+
 /**
- * 檢查這支電話有沒有訂位。
- *   mode='endpoint' → 呼叫 Google Apps Script（名單留在私有試算表，只回傳 ok/name）
- *   mode='hashfile' → 讀公開雜湊檔比對（不需後端，但電話可被暴力反推，見 SETUP.md）
+ * 檢查這支電話（＋驗證碼）是不是有效訂位。
+ *   mode='endpoint' → 呼叫 api.endpoint（Apps Script，名單不外流）
+ *   mode='hashfile' → 讀公開雜湊檔比對
  *   mode='off'      → 不驗證
- * 驗證服務異常時依 CONFIG.reservation.onError 決定放行或擋下。
  */
-async function verifyReservation(phone) {
+async function verifyReservation(phone, code) {
   const R = CFG.reservation || {};
   const mode = R.mode || 'off';
 
-  if (mode === 'endpoint' && R.endpoint) {
+  if (mode === 'endpoint' && apiReady()) {
     try {
-      const sep = R.endpoint.includes('?') ? '&' : '?';
-      const res = await fetch(`${R.endpoint}${sep}phone=${encodeURIComponent(phone)}`, { method: 'GET' });
+      const qs = new URLSearchParams({ phone });
+      if (R.requireCode !== false) qs.set('code', code || '');
+      const res = await fetch(`${API_BASE()}?${qs.toString()}`, { method: 'GET' });
       const data = await res.json();
-      return { ok: !!data.ok, verified: !!data.ok, name: data.name || '', mode, error: false };
+      if (data.ok) return { ok: true, verified: true, name: data.name || '', mode, error: false };
+      return { ok: false, verified: false, name: '', mode, error: false,
+               message: verifyErrorText(data), code: data.error };
     } catch (err) {
       console.warn('訂位驗證連線失敗', err);
-      return { ok: R.onError === 'allow', verified: false, name: '', mode, error: true };
+      return {
+        ok: R.onError === 'allow', verified: false, name: '', mode, error: true,
+        message: R.onError === 'allow'
+          ? '訂位驗證服務暫時無法連線，先讓您繼續點餐（訂單會標記待確認）'
+          : '訂位驗證服務暫時無法連線，請稍後再試或來電門市',
+      };
     }
   }
 
@@ -557,11 +587,34 @@ async function verifyReservation(phone) {
       return { ok: !!hit, verified: !!hit, name: (hit && hit.n) || '', mode, error: false };
     } catch (err) {
       console.warn('訂位雜湊檔讀取失敗', err);
-      return { ok: R.onError === 'allow', verified: false, name: '', mode, error: true };
+      return { ok: R.onError === 'allow', verified: false, name: '', mode, error: true,
+               message: '訂位名單讀取失敗，先讓您繼續點餐' };
     }
   }
 
   return { ok: true, verified: false, name: '', mode: 'off', error: false };
+}
+
+/** 訂單寫入：POST 給 Apps Script（同一訂單編號會覆蓋同一列） */
+async function postOrderToApi(payload) {
+  const res = await fetch(API_BASE(), {
+    method: 'POST',
+    // 用 text/plain 避免 CORS 預檢；Apps Script 端再 JSON.parse
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!data.ok) {
+    const map = {
+      bad_code: '驗證碼驗證失敗，請重新登入',
+      not_found: '查無訂位資料，請重新登入',
+      not_your_order: '這筆訂單不是這個手機號碼的',
+      order_not_found: '找不到這筆訂單（可能已被取消）',
+      no_order_id: '訂單編號遺失，請重新整理後再試',
+    };
+    throw new Error(map[data.error] || `寫入失敗（${data.error || '未知錯誤'}）`);
+  }
+  return data;   // { mode:'created'|'updated', row, status }
 }
 
 const verifyStateText = (u) => {
@@ -578,8 +631,10 @@ function openLogin() {
   openModal(`
     <div class="flex items-start justify-between border-b border-ink/10 px-4 py-3">
       <div>
-        <h3 class="text-lg font-black">手機號碼登入</h3>
-        <p class="text-[12px] text-ink-mute">需為<b>已訂位</b>的客人：請填訂位時留的手機號碼，登入後才能選購</p>
+        <h3 class="text-lg font-black">訂位客人登入</h3>
+        <p class="text-[12px] text-ink-mute">${needVerifyCode()
+          ? '請輸入訂位時的<b>手機號碼</b>與門市提供的<b>驗證碼</b>，通過後才能選購'
+          : '需為<b>已訂位</b>的客人：請填訂位時留的手機號碼，登入後才能選購'}</p>
       </div>
       <button data-close-modal class="grid h-9 w-9 place-items-center rounded-full bg-ink/5">✕</button>
     </div>
@@ -595,11 +650,18 @@ function openLogin() {
                class="mt-1 w-full rounded-xl border border-ink/15 px-3 py-2.5 text-sm outline-none focus:border-ink">
         <span class="mt-1 block text-[11px] text-ink-mute">格式：09 開頭共 10 碼</span>
       </label>
+      ${needVerifyCode() ? `
+      <label class="block">
+        <span class="text-[12px] font-black">驗證碼</span>
+        <input name="code" required inputmode="numeric" maxlength="6" placeholder="門市提供的 4 位數字"
+               class="mt-1 w-full rounded-xl border border-ink/15 px-3 py-2.5 text-sm tracking-[.4em] outline-none focus:border-ink">
+        <span class="mt-1 block text-[11px] text-ink-mute">訂位完成後由門市提供（簡訊／LINE／電話）</span>
+      </label>` : `
       <label class="block">
         <span class="text-[12px] font-black">自訂 4 位數密碼 <span class="font-normal text-ink-mute">（首次登入即設定，之後用來登入）</span></span>
         <input name="pin" required inputmode="numeric" maxlength="4" placeholder="例如 1234"
                class="mt-1 w-full rounded-xl border border-ink/15 px-3 py-2.5 text-sm tracking-[.4em] outline-none focus:border-ink">
-      </label>
+      </label>`}
       <div id="verifyMsg" class="hidden rounded-xl px-3 py-2 text-[12px] font-bold leading-relaxed"></div>
       <button type="submit" class="w-full rounded-full bg-siam-purple py-3 text-sm font-black text-white hover:bg-siam-dark">登入／註冊</button>
       <p class="rounded-xl bg-amber-50 px-3 py-2 text-[11px] leading-relaxed text-amber-900">
@@ -614,37 +676,43 @@ function openLogin() {
         const btn = $('button[type="submit"]', root);
         let name = f.name.value.trim();
         const phone = f.phone.value.replace(/\D/g, '');
-        const pin = f.pin.value.trim();
+        const useCode = needVerifyCode();
+        const code = useCode ? f.code.value.replace(/\D/g, '') : '';
+        const pin = useCode ? '' : f.pin.value.trim();
         const msgBox = $('#verifyMsg', root);
         if (!/^09\d{8}$/.test(phone)) return toast('手機號碼格式錯誤（需 09 開頭 10 碼）');
-        if (!/^\d{4}$/.test(pin)) return toast('密碼需為 4 位數字');
+        if (useCode && !/^\d{4,6}$/.test(code)) return toast('請輸入門市提供的驗證碼');
+        if (!useCode && !/^\d{4}$/.test(pin)) return toast('密碼需為 4 位數字');
 
-        // 先驗證這支電話有沒有訂位（mode='off' 時直接通過）
+        // 驗證訂位：endpoint 模式＝電話＋驗證碼；off/hashfile＝只驗電話
         btn.disabled = true;
         const label = btn.textContent;
         btn.textContent = '驗證訂位中…';
-        const v = await verifyReservation(phone);
+        const v = await verifyReservation(phone, code);
         btn.disabled = false;
         btn.textContent = label;
 
         if (!v.ok) {
           msgBox.className = 'rounded-xl bg-thai-red/10 px-3 py-2 text-[12px] font-bold leading-relaxed text-thai-red';
-          msgBox.innerHTML = `查無此訂位電話。<br>請確認是訂位時留的手機號碼，或來電門市 ${esc(CFG.brand.phone || '')}。`;
+          msgBox.innerHTML = `${esc(v.message || '驗證失敗')}<br>需要協助請來電門市 ${esc(CFG.brand.phone || '')}`;
           return;
         }
-        if (v.error) toast('訂位驗證服務暫時無法連線，先讓您繼續點餐（訂單會標記待確認）', 3600);
+        if (v.error) toast(v.message || '驗證服務連線異常，先讓您繼續點餐', 3600);
         if (!name && v.name) name = v.name;
         if (!name) return toast('請填寫姓名');
 
-        const known = S.users[phone];
-        if (known) {
-          if (known.pin !== pin) return toast('密碼不正確');
-          if (known.name !== name) S.users[phone].name = name;
-        } else {
-          S.users[phone] = { name, pin };
+        // 沒有驗證碼模式時，才用本機自訂密碼（純前端帳號）
+        if (!useCode) {
+          const known = S.users[phone];
+          if (known) {
+            if (known.pin !== pin) return toast('密碼不正確');
+            if (known.name !== name) S.users[phone].name = name;
+          } else {
+            S.users[phone] = { name, pin };
+          }
+          save(LS.users, S.users);
         }
-        save(LS.users, S.users);
-        S.user = { name, phone, verified: v.verified, verifyMode: v.mode, verifyError: !!v.error };
+        S.user = { name, phone, code, verified: v.verified, verifyMode: v.mode, verifyError: !!v.error };
         save(LS.user, S.user);
         const draft = S.draft;   // 若正在選套餐，登入後回到原畫面
         closeModal();
@@ -797,8 +865,8 @@ function openCheckout() {
           ? `<p class="mt-1 font-bold text-thai-red">⚠ 每人平均 ${fmt(round(c.subtotal / c.headcount))}，未達最低消費 ${fmt(CFG.rules.minSpendPerPerson)}</p>` : ''}
       </div>
 
-      ${CFG.form.action ? '' : `<p class="rounded-xl bg-amber-50 px-3 py-2 text-[11px] leading-relaxed text-amber-900">
-        ⓘ <b>示範模式</b>：尚未設定 Google 表單 action，送出後訂單只會存在本機（設定方式見 SETUP.md）。</p>`}
+      ${(apiReady() || CFG.form.action) ? '' : `<p class="rounded-xl bg-amber-50 px-3 py-2 text-[11px] leading-relaxed text-amber-900">
+        ⓘ <b>示範模式</b>：尚未連接門市系統（Apps Script 與 Google 表單都未設定），送出後訂單只會存在本機。設定方式見 SETUP.md。</p>`}
 
       <button id="btnSubmit" class="w-full rounded-full bg-brand py-3.5 text-sm font-black text-ink transition hover:bg-brand-dark">
         確認送出訂單
@@ -873,21 +941,41 @@ async function submitOrder(ev) {
     ts: new Date().toLocaleString('zh-TW', { hour12: false }),
   };
 
+  const useApi = (CFG.ordersWrite && CFG.ordersWrite.mode === 'apps-script' && apiReady());
   btn.disabled = true;
   btn.textContent = '傳送中…';
   let delivered = false;
+  let writeInfo = null;
   try {
-    delivered = await postToGoogleForm(values);
+    if (useApi) {
+      writeInfo = await postOrderToApi({
+        action: S.editing ? '修改' : '新增',
+        orderId, name, phone, code: S.user.code || '',
+        pickup: values.pickup, headcount: c.headcount,
+        sets: setLines.join(' ｜ '), setsTotal: c.setsSubtotal,
+        alacarte: alcLines.join('、'), alacarteTotal: c.alcSubtotal,
+        service: c.service, total: c.total, note: values.note, ts: values.ts,
+      });
+      delivered = true;
+    } else {
+      delivered = await postToGoogleForm(values);
+    }
   } catch (err) {
-    console.warn('form post failed', err);
+    console.warn('訂單寫入失敗', err);
+    btn.disabled = false;
+    btn.textContent = '確認送出訂單';
+    toast(`送出失敗：${err.message || '請稍後再試'}`, 4200);
+    return;   // 保留購物車內容，讓客人可以重試
   }
 
   const record = {
     orderId, phone, name, pickup: values.pickup, headcount: c.headcount, total: c.total,
     status: act, ts: Date.now(), note,
+    code: S.user.code || '',
     summary: [...setLines, ...alcLines].join(' ｜ '),
     cart: JSON.parse(JSON.stringify(S.cart)),
     delivered,
+    writeMode: writeInfo ? writeInfo.mode : (delivered ? 'form' : 'local'),
   };
   S.orders = S.orders.filter((o) => o.orderId !== orderId).concat(record);
   save(LS.orders, S.orders);
@@ -937,9 +1025,13 @@ function showSuccess(record, delivered) {
         </div>
       </div>
       <p class="mt-3 rounded-xl ${delivered ? 'bg-thai-green/10 text-thai-green' : 'bg-amber-50 text-amber-900'} px-3 py-2 text-[11px] leading-relaxed">
-        ${delivered
-          ? '訂單已寫入門市 Google 表單／試算表，門市將依此備餐。'
-          : '示範模式：尚未設定 Google 表單，此筆訂單僅儲存在本機（請見 SETUP.md 設定後再正式收單）。'}
+        ${!delivered
+          ? '示範模式：尚未連接門市系統，此筆訂單僅儲存在本機（請見 SETUP.md 設定後再正式收單）。'
+          : record.writeMode === 'updated'
+            ? '訂單已更新到門市試算表（同一筆覆蓋，不會多出一列）。'
+            : record.writeMode === 'created'
+              ? '訂單已寫入門市試算表，門市將依此備餐。'
+              : '訂單已送出到門市 Google 表單（修改會以新的一列記錄，門市取最新一筆）。'}
       </p>
       <div class="mt-4 flex flex-col gap-2">
         <button id="btnGoOrders" class="w-full rounded-full bg-ink py-3 text-sm font-black text-white">查看我的訂單（可修改／取消）</button>
@@ -976,7 +1068,23 @@ async function cancelOrder(orderId) {
     ts: new Date().toLocaleString('zh-TW', { hour12: false }),
   };
   let delivered = false;
-  try { delivered = await postToGoogleForm(values); } catch (e) { console.warn(e); }
+  const useApi = (CFG.ordersWrite && CFG.ordersWrite.mode === 'apps-script' && apiReady());
+  try {
+    if (useApi) {
+      await postOrderToApi({
+        action: '取消', orderId, name: o.name, phone: o.phone,
+        code: o.code || (S.user && S.user.code) || '', pickup: o.pickup, headcount: o.headcount,
+        sets: o.summary, setsTotal: '', alacarte: '', alacarteTotal: '',
+        service: '', total: o.total, note: o.note || '無', ts: values.ts,
+      });
+      delivered = true;
+    } else {
+      delivered = await postToGoogleForm(values);
+    }
+  } catch (err) {
+    console.warn('取消訂單失敗', err);
+    return toast(`取消失敗：${err.message || '請稍後再試'}`, 4200);
+  }
   o.status = '取消訂單';
   o.ts = Date.now();
   save(LS.orders, S.orders);

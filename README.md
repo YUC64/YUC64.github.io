@@ -1,6 +1,7 @@
 # 饗泰多 SIAM MORE｜除夕線上預點餐
 
-純前端（HTML / Tailwind CSS CDN / Vanilla JS）的除夕年菜線上預訂網站，資料以 **Google 表單 → Google 試算表** 收集，沒有任何後端伺服器與資料庫，可直接託管在 **GitHub Pages**。
+純前端（HTML / Tailwind CSS CDN / Vanilla JS）的除夕年菜線上預訂網站，託管在 **GitHub Pages**，
+資料透過一支免費的 **Google Apps Script** 直接寫入 Google 試算表（不需要自架伺服器、不使用 Google 表單）。
 
 > 菜單、套餐組合、「選 N」規則、單點價目、**辣度標示（辣椒圖示數量）**、加收規則（10% 服務費、每人低消 $600、需先點套餐才能單點）皆依門市《2027 年春節內用菜單》PDF 實作。
 
@@ -11,7 +12,7 @@
 | 需求 | 實作 |
 |---|---|
 | 未登入只能看菜單 | 未登入時所有「加入」按鈕變成「登入後選購」，點擊會跳出登入視窗；購物車與結帳也都要求登入 |
-| 訂位客人才能點餐 | 用**訂位時留的手機號碼**登入時，會向 Google Apps Script 查核訂位名單（名單不外流）；查無訂位就擋下並顯示門市電話。可切換 `off`／`endpoint`／`hashfile` 三種模式 |
+| 訂位客人才能點餐 | 用**手機號碼＋驗證碼**（員工在訂位表發給客人）登入，由 Apps Script 查核私有名單（名單不外流）；錯 8 次自動鎖 1 小時。可切換 `off`／`endpoint`／`hashfile` 三種模式 |
 | 員工專用頁 | 頁尾一個很小的「員工專用」連結 → `staff.html`：試算表入口、客人電話查詢、除夕當天流程。**不放密碼、不顯示客人資料**（真的資料都在權限受控的 Google 試算表）|
 | 手機號碼登入 | 手機號碼 + 姓名 + 自訂 4 位數密碼（存於該裝置 localStorage）；登入後才能選購與送出 |
 | 菜單展示 | 5 個春節套餐 + 42 道單點、12 個分類頁籤、卡片式排版，缺圖自動以品牌色卡片代替 |
@@ -23,7 +24,8 @@
 | 購物車系統 | 右側滑出面板、動態增減數量、即時計算（套餐／單點／10% 服務費／每人平均） |
 | 訂購人資訊 | 姓名、電話、預計取餐日 + 時段、備註 |
 | 修改／取消自己的訂單 | 「我的訂單」可查看、載回購物車修改（同訂單編號、動作標記「修改訂單」）、取消、用訂單編號查詢 |
-| 背景送出 | `e.preventDefault()` + `fetch(action, {mode:'no-cors'})`，以 `entry.ID` 對應寫入 Google 表單 |
+| 背景送出 | `e.preventDefault()` + `fetch()` POST JSON 給 Apps Script，**可讀取回應**（真的知道成功／失敗，失敗會保留購物車讓客人重試）|
+| 真正可改單 | 以「訂單編號」為 key，改單會**覆蓋試算表同一列**（不是新增一筆）|
 | 品牌識別 | 使用門市 LOGO（去背 + 白色版 + 大象 mark 作為 favicon），說明區塊置於頁面上方 |
 
 ## 檔案結構
@@ -42,7 +44,9 @@ assets/img/spicy.png        辣度辣椒圖示（取自門市菜單 PDF）
 js/config.js                ← 唯一需要改的設定檔（品牌、規則、Google 表單）
 js/data.js                  菜單資料（套餐、單點、分類、辣度表、冰熱選項）
 js/app.js                   全部商業邏輯（購物車、登入、送出）
-tools/form-entry-ids.mjs    自動從 Google 表單網址抓出 entry.ID 並寫回 config.js
+scripts/google-apps-script/Code.gs  ★ Google 端主程式（驗證 API + 訂單寫入 + 設定工具）
+scripts/mock-apps-script.py  本機模擬 Apps Script，離線測完整流程
+tools/form-entry-ids.mjs    （舊做法）自動從 Google 表單網址抓出 entry.ID 並寫回 config.js
 tools/make-reservation-hashes.mjs  訂位名單 CSV → 公開雜湊檔（hashfile 模式用）
 scripts/fetch-images.py     從 Wikimedia Commons 抓免費授權菜品圖
 scripts/pick-candidates.py  多抓幾個候選圖做人工挑圖對照表

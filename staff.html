@@ -54,10 +54,12 @@
   <!-- 查詢客人的訂位／訂單 -->
   <section class="rounded-2xl border border-white/10 bg-white/5 p-4">
     <h2 class="text-sm font-black text-brand">② 查客人有沒有訂位</h2>
-    <p class="mt-1 text-[11px] text-white/50">客人報電話時，輸入 10 碼手機號碼按查詢。</p>
-    <div class="mt-3 flex gap-2">
+    <p class="mt-1 text-[11px] text-white/50">客人報電話時，輸入 10 碼手機號碼，再填名單上的驗證碼按查詢。</p>
+    <div class="mt-3 flex flex-wrap gap-2">
       <input id="phone" inputmode="numeric" maxlength="10" placeholder="0912345678"
              class="min-w-0 flex-1 rounded-xl border border-white/15 bg-black/40 px-3 py-2.5 text-sm outline-none focus:border-brand">
+      <input id="code" inputmode="numeric" maxlength="6" placeholder="驗證碼"
+             class="w-24 rounded-xl border border-white/15 bg-black/40 px-3 py-2.5 text-center text-sm tracking-[.3em] outline-none focus:border-brand">
       <button id="btnCheck" class="rounded-xl bg-brand px-5 text-sm font-black text-ink hover:bg-brand-dark">查詢</button>
     </div>
     <div id="result" class="mt-3 text-[13px] font-bold"></div>
@@ -119,12 +121,13 @@
       ? '連結設定在 js/config.js 的 staff.sheetUrl / staff.ordersSheetUrl。'
       : '尚未設定試算表連結：請把網址填進 js/config.js 的 staff.sheetUrl 與 staff.ordersSheetUrl。';
 
-  /* ---- 電話查詢（用與客人相同的驗證來源） ---- */
+  /* ---- 電話查詢（用與客人相同的驗證來源；同一個 Apps Script 網址） ---- */
   const R = CFG.reservation || {};
+  const API = String((CFG.api && CFG.api.endpoint) || '').trim();
   const mode = R.mode || 'off';
   const note = document.getElementById('modeNote');
   note.textContent = mode === 'endpoint'
-    ? (R.endpoint ? '驗證方式：Google Apps Script（名單留在私有試算表，只回傳是否訂位）' : 'mode=endpoint 但尚未填 endpoint 網址。')
+    ? (API ? '驗證方式：Google Apps Script（名單留在私有試算表，只回傳是否訂位）' : 'mode=endpoint 但尚未填 api.endpoint 網址。')
     : mode === 'hashfile'
       ? '驗證方式：公開雜湊檔（不需後端；提醒：電話有被暴力反推的風險，見 SETUP.md）'
       : '目前為 off：網站不驗證訂位，任何電話都能登入點餐。請在 js/config.js 設定 reservation.mode。';
@@ -134,17 +137,22 @@
 
   document.getElementById('btnCheck').addEventListener('click', async () => {
     const phone = document.getElementById('phone').value.replace(/\D/g, '');
+    const code = document.getElementById('code').value.replace(/\D/g, '');
     if (!/^09\d{8}$/.test(phone)) return show('手機號碼格式錯誤（需 09 開頭 10 碼）', 'text-thai-red');
     if (mode === 'off') return show('尚未啟用訂位驗證，請直接看「訂位名單」試算表核對。', 'text-amber-300');
+    if (mode === 'endpoint' && R.requireCode !== false && !code) return show('請輸入名單上的驗證碼', 'text-amber-300');
     show('查詢中…', 'text-white/60');
     try {
-      if (mode === 'endpoint' && R.endpoint) {
-        const sep = R.endpoint.includes('?') ? '&' : '?';
-        const res = await fetch(`${R.endpoint}${sep}phone=${encodeURIComponent(phone)}`);
+      if (mode === 'endpoint' && API) {
+        const qs = new URLSearchParams({ phone });
+        if (R.requireCode !== false) qs.set('code', code);
+        const res = await fetch(`${API}?${qs}`);
         const data = await res.json();
         show(data.ok
-          ? `✓ 有訂位${data.name ? `：<span class="text-brand">${esc(data.name)}</span>` : ''}`
-          : '✗ 查無訂位紀錄（請確認號碼，或查訂位名單試算表）', data.ok ? 'text-thai-green' : 'text-thai-red');
+          ? `✓ 訂位有效${data.name ? `：<span class="text-brand">${esc(data.name)}</span>` : ''}`
+          : '✗ ' + ({ bad_code: '驗證碼不符（請確認名單上的驗證碼）', not_found: '查無此電話的訂位紀錄',
+                      too_many_attempts: '嘗試次數過多，請稍後再查' }[data.error] || '查無訂位紀錄'),
+          data.ok ? 'text-thai-green' : 'text-thai-red');
       } else if (mode === 'hashfile') {
         const list = await (window.__resList = window.__resList || fetch(R.hashFile || 'data/reservations.json').then((r) => r.json()));
         const enc = new TextEncoder();

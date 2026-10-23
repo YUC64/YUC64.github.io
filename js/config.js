@@ -49,20 +49,33 @@ window.CONFIG = {
     dutyPhone: '',
   },
 
+  // ---------------------------------------------------------------------------
+  // Apps Script API（同一個網址同時提供「訂位驗證」與「訂單寫入」）
+  //   部署方式見 SETUP.md：Apps Script → 部署 → 網頁應用程式（執行身分：我／存取權：任何人）
+  // ---------------------------------------------------------------------------
+  api: {
+    endpoint: '',   // 例：'https://script.google.com/macros/s/AKfycb.../exec'
+  },
+
   reservation: {
-    // off       = 不驗證，任何電話都能登入點餐（尚未設定的預設值）
-    // endpoint  = 呼叫 Google Apps Script 驗證（推薦，名單不外流）
-    // hashfile  = 讀取公開的雜湊檔驗證（不需後端，但電話可被暴力反推，見 SETUP.md）
+    // off      = 不驗證，任何電話都能登入（尚未設定的預設值）
+    // endpoint = 用 api.endpoint 驗證「電話 + 驗證碼」（推薦）
+    // hashfile = 讀公開雜湊檔（不需後端，但電話可被暴力反推，見 SETUP.md）
     mode: 'off',
-    // mode='endpoint' 時的 Apps Script Web App 網址（結尾 /exec）
-    endpoint: '',
     // mode='hashfile' 時的雜湊檔路徑
     hashFile: 'data/reservations.json',
-    // 驗證服務異常（斷線／Apps Script 掛掉）時：allow = 先讓客人點（訂單會標記未驗證）
+    // 需要驗證碼（員工在訂位表給客人的 4 位數）
+    requireCode: true,
+    // 驗證服務異常（斷線／Apps Script 掛掉）時：allow = 先讓客人點（訂單標記待確認）
     //                                        block = 擋下並請客人來電
     onError: 'allow',
-    // 通過驗證後是否要求客人自行填寫姓名
-    askName: true,
+  },
+
+  ordersWrite: {
+    // apps-script = 直接寫入 Google 試算表（推薦：同一訂單編號會覆蓋同一列，送出後有回應）
+    // google-form = 舊做法：POST 到 Google 表單（只能新增列，修改會變兩筆）
+    // off         = 只存本機（示範模式）
+    mode: 'apps-script',
   },
 
   // ---------------------------------------------------------------------------
