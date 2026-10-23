@@ -1,5 +1,8 @@
 # SETUP — 接上 Google 表單（5 分鐘）
 
+> 2027 除夕版新增：`js/data.js` 多了辣度表（`SPICY`）與冰／去冰／熱選項（`TEMPS`）；
+> 登入後才能選購；LOGO 與辣椒圖示放在 `assets/img/`。這些都不影響表單設定流程。
+
 網站沒有任何後端，訂單是「假裝有人填 Google 表單」送出的：前端用 `fetch()` 把購物車內容 POST 到表單的
 `/formResponse`，並用 `entry.xxxxx` 對應每個題目。所以只要做兩件事：**建表單** → **把 entry.ID 填進 `js/config.js`**。
 
@@ -24,8 +27,11 @@
 | 10 | 單點金額 | |
 | 11 | 服務費 | 10% |
 | 12 | 總金額 | 套餐＋單點＋服務費 |
-| 13 | 備註 | |
+| 13 | 備註 | 客人填的備註 |
 | 14 | 送出時間 | |
+
+> 訂單內容字串會包含冰熱與辣度資訊，例如
+> `春節四人套餐 x1 [涼拌:酸辣海鮮涼拌 … | 飲料:泰式奶茶(冰)/泰式奶茶(熱)…]`、`摩摩喳喳(去冰) x1`。
 
 3. 表單右上「傳送」→ 連結 → **勾選「縮短網址」與「知道連結的任何人可以回覆」** → 複製連結。
 
@@ -123,6 +129,13 @@ function doPost(e) {
 python scripts/fetch-images.py            # 抓缺的
 python scripts/fetch-images.py --force     # 全部重抓
 python scripts/pick-candidates.py          # 產生候選圖對照表 candidates/sheet_*.png 供挑圖
+```
+
+把菜單 PDF 轉成高解析圖片（Windows 內建 API，方便核對辣度或做素材）：
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/render-pdf.ps1 `
+  -Pdf "C:\path\menu.pdf" -OutDir "C:\path\pages" -Scale 2.2
 ```
 
 ## 部署到 GitHub Pages

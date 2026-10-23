@@ -1,11 +1,13 @@
 /* =============================================================================
- *  饗泰多 2027 春節內用預訂 — 前端主程式（Vanilla JS，無框架、無後端）
+ *  饗泰多 SIAM MORE｜除夕線上預點餐 — 前端主程式（Vanilla JS，無框架、無後端）
  *
  *  資料流：瀏覽器 → 購物車（記憶體 + localStorage）→ Google 表單 formResponse
  *  規則（依門市菜單 PDF）：
- *    1. 必須先加入一份「春節多人套餐」，才能單點加點
- *    2. 套餐內容需依「選 N」規則選滿才能加入購物車
- *    3. 金額 = 套餐 + 單點，另加 10% 服務費；每人最低消費 $600
+ *    1. 未登入只能瀏覽菜單，不能選購（加入購物車／結帳都要登入）
+ *    2. 必須先加入一份「春節多人套餐」，才能單點加點
+ *    3. 套餐內容需依「選 N」規則選滿才能加入購物車（飲料可逐杯選冰／去冰／熱）
+ *    4. 金額 = 套餐 + 單點，另加 10% 服務費；每人最低消費 $600
+ *    5. 辣度依 PDF 辣椒圖示數量顯示
  * ========================================================================== */
 
 /* 包在 IIFE 內，避免與 data.js / config.js 的全域常數（SETS、CONFIG…）互相衝突 */
@@ -20,16 +22,26 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&
 const round = (n) => Math.round(n);
 
 const LS = {
-  user:   'eatthai.user',
-  cart:   'eatthai.cart',
-  orders: 'eatthai.orders',
-  users:  'eatthai.users',
+  user:   'eatthai.v2.user',
+  cart:   'eatthai.v2.cart',
+  orders: 'eatthai.v2.orders',
+  users:  'eatthai.v2.users',
 };
 const load = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
 const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* 私密模式 */ } };
 
-const { SETS, ALC, CATEGORIES, DRINK_OPTIONS, DRINK_UPGRADES } = window.MENU;
+const { SETS, ALC, CATEGORIES, DRINK_OPTIONS, DRINK_UPGRADES, spicyOf, tempsOf } = window.MENU;
 const CFG = window.CONFIG;
+
+/* ---------------------------------------------------------------- 辣度／冰熱 */
+/** 辣度圖示（用門市菜單 PDF 上的辣椒圖） */
+const spicyHTML = (name, cls = 'h-3.5') => {
+  const n = spicyOf(name);
+  if (!n) return '';
+  const one = `<img src="assets/img/spicy.png" alt="辣" class="${cls} w-auto">`;
+  return `<span class="inline-flex items-center gap-0.5 align-[-2px]" title="辣度 ${n}／2（依門市菜單標示）">${one.repeat(n)}</span>`;
+};
+const tempChip = (t) => `<span class="rounded bg-ink/5 px-1.5 py-0.5 text-[10px] font-black text-ink-soft">${esc(t)}</span>`;
 
 /* ---------------------------------------------------------------- 狀態 */
 const S = {
@@ -38,13 +50,22 @@ const S = {
   orders: load(LS.orders, []),
   users: load(LS.users, {}),
   cat: 'cold',
-  editing: null,     // 正在修改的訂單編號
-  draft: null,       // 套餐選配中的暫存
+  editing: null,
+  draft: null,
 };
 
 const persistCart = () => save(LS.cart, S.cart);
 const hasSet = () => S.cart.sets.length > 0;
 const alcLocked = () => CFG.rules.requireSetBeforeAlcarte && !hasSet();
+const loggedIn = () => !!S.user;
+
+/** 需要登入的動作：未登入就提示並開啟登入視窗，回傳 true 表示已攔下 */
+function needLogin(msg = '請先登入才能選購餐點') {
+  if (loggedIn()) return false;
+  toast(msg, 2600);
+  openLogin();
+  return true;
+}
 
 /* ---------------------------------------------------------------- 金額 */
 function calc() {
@@ -94,7 +115,7 @@ function closeModal() {
 $('#modal').addEventListener('click', (e) => { if (e.target.id === 'modal') closeModal(); });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeModal(); toggleCart(false); } });
 
-/* ---------------------------------------------------------------- 圖片（含缺失替代） */
+/* ---------------------------------------------------------------- 圖片 */
 function imgBlock(src, alt, emoji = '🍲') {
   return `<div class="group relative aspect-[4/3] w-full overflow-hidden rounded-xl img-fallback">
       <span class="absolute inset-0 grid place-items-center text-4xl">${emoji}</span>
@@ -108,8 +129,9 @@ function imgBlock(src, alt, emoji = '🍲') {
 /* ================================================================ 套餐區 */
 function setCardHTML(def) {
   const fixed = def.fixed.length
-    ? `<p class="mt-1 text-[12px] leading-relaxed text-ink-mute"><b class="text-ink">套餐特選：</b>${def.fixed.map(esc).join('、')}</p>`
+    ? `<p class="mt-1 text-[12px] leading-relaxed text-ink-mute"><b class="text-ink">套餐特選：</b>${def.fixed.map((f) => esc(f) + spicyHTML(f)).join('、')}</p>`
     : '';
+  const openLabel = loggedIn() ? '挑選菜色並加入購物車' : '查看菜色內容（登入後才能選購）';
   return `<article class="card-enter overflow-hidden rounded-3xl border border-ink/10 bg-white shadow-card">
     <div class="relative">
       ${imgBlock(def.img, def.name, '🍛')}
@@ -128,11 +150,11 @@ function setCardHTML(def) {
         </p>
       </div>
       <div class="mt-3 rounded-xl bg-[#F7F4EC] px-3 py-2 text-[12px] text-ink-soft">
-        需選擇：${def.groups.map((g) => `${esc(g.label)} ${g.pick} 道`).join('、')}、飲料 ${def.drinkPick} 杯（可加價升級酒類／特調）
+        需選擇：${def.groups.map((g) => `${esc(g.label)} ${g.pick} 道`).join('、')}、飲料 ${def.drinkPick} 杯（每杯可選冰／去冰／熱）
       </div>
       <button data-config-set="${def.id}"
-              class="mt-3 w-full rounded-full bg-ink py-3 text-sm font-black text-white transition hover:bg-black active:scale-[.99]">
-        挑選菜色並加入購物車
+              class="mt-3 w-full rounded-full py-3 text-sm font-black transition ${loggedIn() ? 'bg-ink text-white hover:bg-black' : 'bg-siam-purple text-white hover:bg-siam-dark'} active:scale-[.99]">
+        ${openLabel}
       </button>
     </div>
   </article>`;
@@ -147,10 +169,16 @@ function openSetConfig(setId, editLine = null) {
   const def = SETS.find((s) => s.id === setId);
   S.draft = editLine
     ? JSON.parse(JSON.stringify(editLine))
-    : { lineId: `L${Date.now().toString(36)}`, setId, qty: 1, picks: {}, drinks: {}, upgrades: [] };
+    : { lineId: `L${Date.now().toString(36)}`, setId, qty: 1, picks: {}, drinks: [], upgrades: [] };
+
   def.groups.forEach((g) => { if (!S.draft.picks[g.key]) S.draft.picks[g.key] = []; });
-  DRINK_OPTIONS.forEach((d) => { if (S.draft.drinks[d] == null) S.draft.drinks[d] = 0; });
   if (!S.draft.upgrades) S.draft.upgrades = [];
+
+  // 飲料：以「杯」為單位，預設第一種飲料 + 第一個冰熱選項，可逐杯調整
+  if (!Array.isArray(S.draft.drinks) || S.draft.drinks.length !== def.drinkPick) {
+    const d0 = DRINK_OPTIONS[0];
+    S.draft.drinks = Array.from({ length: def.drinkPick }, () => ({ name: d0, temp: (tempsOf(d0)[0] || '') }));
+  }
 
   openModal(`
     <div class="sticky top-0 z-10 flex items-start justify-between gap-3 border-b border-ink/10 bg-white px-4 py-3">
@@ -162,7 +190,7 @@ function openSetConfig(setId, editLine = null) {
     </div>
     <div class="space-y-4 px-4 py-4">
       <div class="rounded-2xl border border-brand-deep bg-brand/15 p-3 text-[12px] leading-relaxed text-ink-soft">
-        <b class="text-ink">套餐特選（隨餐附贈）</b><br>${def.fixed.map(esc).join('、')}
+        <b class="text-ink">套餐特選（隨餐附贈）</b><br>${def.fixed.map((f) => esc(f) + spicyHTML(f)).join('、')}
       </div>
       ${def.groups.map((g) => `
         <div class="group-box" data-group="${g.key}">
@@ -171,25 +199,16 @@ function openSetConfig(setId, editLine = null) {
             <p class="text-[11px] font-bold" data-counter="${g.key}"></p>
           </div>
           <div class="mt-2 flex flex-wrap gap-1.5">
-            ${g.options.map((o) => `<button class="chip" data-pick="${g.key}" data-value="${esc(o)}">${esc(o)}</button>`).join('')}
+            ${g.options.map((o) => `<button class="chip" data-pick="${g.key}" data-value="${esc(o)}">${esc(o)}${spicyHTML(o)}</button>`).join('')}
           </div>
         </div>`).join('')}
       <div class="group-box" data-group="drink">
         <div class="group-head">
-          <p class="text-sm font-black">飲料 <span class="text-ink-mute">／選 ${def.drinkPick}</span></p>
+          <p class="text-sm font-black">飲料 <span class="text-ink-mute">／選 ${def.drinkPick} 杯</span></p>
           <p class="text-[11px] font-bold" data-counter="drink"></p>
         </div>
-        <div class="mt-2 space-y-2">
-          ${DRINK_OPTIONS.map((d) => `
-            <div class="flex items-center justify-between rounded-xl bg-white px-3 py-2">
-              <span class="text-sm font-bold">${esc(d)}</span>
-              <span class="flex items-center gap-2">
-                <button class="qty-btn" data-drink="${esc(d)}" data-delta="-1">−</button>
-                <span class="w-6 text-center text-sm font-black" data-drinkval="${esc(d)}">0</span>
-                <button class="qty-btn" data-drink="${esc(d)}" data-delta="1">+</button>
-              </span>
-            </div>`).join('')}
-        </div>
+        <p class="mt-1 text-[11px] text-ink-mute">每一杯都可以單獨選品項與冰／去冰／熱</p>
+        <div class="mt-2 space-y-2">${drinkSlotsHTML()}</div>
       </div>
       <div class="group-box">
         <p class="text-sm font-black">加價升級酒類／特調 <span class="text-ink-mute">（可選，價差依現場公告）</span></p>
@@ -203,11 +222,43 @@ function openSetConfig(setId, editLine = null) {
         <span class="font-bold text-ink-mute">金額</span>
         <span class="text-xl font-black">${fmt(def.price)}</span>
       </div>
-      <button data-add-set class="w-full rounded-full bg-brand py-3 text-sm font-black text-ink transition hover:bg-brand-dark">
-        加入購物車
-      </button>
+      <button data-add-set class="w-full rounded-full py-3 text-sm font-black transition">加入購物車</button>
       <p data-draft-hint class="mt-2 text-center text-[12px] font-bold text-ink-mute"></p>
-    </div>`, { onMount: () => syncDraftUI() });
+    </div>`, {
+    onMount: (root) => {
+      root.addEventListener('change', (e) => {
+        const d = e.target.dataset;
+        if (d.drinkslot !== undefined) {
+          const i = Number(d.drinkslot);
+          const name = e.target.value;
+          S.draft.drinks[i] = { name, temp: tempsOf(name)[0] || '' };
+          $('[data-group="drink"]', root).querySelector('div.mt-2.space-y-2').innerHTML = drinkSlotsHTML();
+          syncDraftUI();
+        }
+        if (d.tempslot !== undefined) {
+          S.draft.drinks[Number(d.tempslot)].temp = e.target.value;
+          syncDraftUI();
+        }
+      });
+      syncDraftUI();
+    },
+  });
+}
+
+/** 飲料逐杯選擇器 */
+function drinkSlotsHTML() {
+  return S.draft.drinks.map((slot, i) => {
+    const temps = tempsOf(slot.name);
+    return `<div class="flex items-center gap-2 rounded-xl bg-white px-2 py-2">
+      <span class="w-11 shrink-0 text-[11px] font-black text-ink-mute">第 ${i + 1} 杯</span>
+      <select data-drinkslot="${i}" class="min-w-0 flex-1 rounded-lg border border-ink/15 bg-white px-2 py-1.5 text-[13px] font-bold outline-none focus:border-ink">
+        ${DRINK_OPTIONS.map((d) => `<option value="${esc(d)}"${slot.name === d ? ' selected' : ''}>${esc(d)}</option>`).join('')}
+      </select>
+      ${temps.length ? `<select data-tempslot="${i}" class="w-24 shrink-0 rounded-lg border border-ink/15 bg-white px-2 py-1.5 text-[13px] font-bold outline-none focus:border-ink">
+        ${temps.map((t) => `<option value="${esc(t)}"${slot.temp === t ? ' selected' : ''}>${esc(t)}</option>`).join('')}
+      </select>` : '<span class="w-24 shrink-0 text-center text-[11px] text-ink-mute">冰飲</span>'}
+    </div>`;
+  }).join('');
 }
 
 function syncDraftUI() {
@@ -218,56 +269,74 @@ function syncDraftUI() {
     const box = $(`[data-group="${g.key}"]`);
     box.classList.toggle('bad', chosen.length !== g.pick);
     if (chosen.length !== g.pick) ok = false;
-    $(`[data-counter="${g.key}"]`).textContent =
-      chosen.length === g.pick ? `已選 ${chosen.length}／${g.pick} ✓` : `還需 ${g.pick - chosen.length} 道`;
-    $(`[data-counter="${g.key}"]`).className = `text-[11px] font-bold ${chosen.length === g.pick ? 'text-thai-green' : 'text-thai-red'}`;
+    const c = $(`[data-counter="${g.key}"]`);
+    c.textContent = chosen.length === g.pick ? `已選 ${chosen.length}／${g.pick} ✓` : `還需 ${g.pick - chosen.length} 道`;
+    c.className = `text-[11px] font-bold ${chosen.length === g.pick ? 'text-thai-green' : 'text-thai-red'}`;
     $$(`[data-pick="${g.key}"]`).forEach((b) => b.classList.toggle('on', chosen.includes(b.dataset.value)));
   });
-  const drinkTotal = DRINK_OPTIONS.reduce((n, d) => n + (S.draft.drinks[d] || 0), 0);
-  const drinkOK = drinkTotal === def.drinkPick;
-  if (!drinkOK) ok = false;
-  $('[data-group="drink"]').classList.toggle('bad', !drinkOK);
+
+  const drinksOK = S.draft.drinks.every((d) => d.name);
+  if (!drinksOK) ok = false;
   const dc = $('[data-counter="drink"]');
-  dc.textContent = drinkOK ? `已選 ${drinkTotal}／${def.drinkPick} ✓` : `還需 ${def.drinkPick - drinkTotal} 杯`;
-  dc.className = `text-[11px] font-bold ${drinkOK ? 'text-thai-green' : 'text-thai-red'}`;
-  DRINK_OPTIONS.forEach((d) => { $(`[data-drinkval="${d}"]`).textContent = S.draft.drinks[d] || 0; });
+  dc.textContent = drinksOK ? `已選 ${S.draft.drinks.length}／${def.drinkPick} ✓` : `還需 ${def.drinkPick - S.draft.drinks.filter((d) => d.name).length} 杯`;
+  dc.className = `text-[11px] font-bold ${drinksOK ? 'text-thai-green' : 'text-thai-red'}`;
+
   $$('[data-upgrade]').forEach((b) => b.classList.toggle('on', S.draft.upgrades.includes(b.dataset.upgrade)));
-  $('[data-add-set]').disabled = !ok;
-  $('[data-add-set]').className = `w-full rounded-full py-3 text-sm font-black transition ${ok ? 'bg-brand text-ink hover:bg-brand-dark' : 'bg-gray-200 text-gray-400'}`;
-  $('[data-draft-hint]').textContent = ok ? '內容已選滿，可以加入購物車' : '請依「選 N」規則選滿後再加入購物車';
+
+  const btn = $('[data-add-set]');
+  const canAdd = ok && loggedIn();
+  btn.disabled = !ok;
+  if (!ok) {
+    btn.className = 'w-full rounded-full py-3 text-sm font-black transition bg-gray-200 text-gray-400';
+    btn.textContent = '加入購物車';
+  } else if (!loggedIn()) {
+    btn.className = 'w-full rounded-full py-3 text-sm font-black transition bg-siam-purple text-white hover:bg-siam-dark';
+    btn.textContent = '登入後加入購物車';
+  } else {
+    btn.className = 'w-full rounded-full py-3 text-sm font-black transition bg-brand text-ink hover:bg-brand-dark';
+    btn.textContent = '加入購物車';
+  }
+  $('[data-draft-hint]').textContent = !ok
+    ? '請依「選 N」規則選滿後再加入購物車'
+    : (loggedIn() ? '內容已選滿，可以加入購物車' : '內容已選滿，登入後即可加入購物車');
 }
 
 /* ================================================================ 單點區 */
 function renderTabs() {
-  const box = $('#catTabs > div');
-  box.innerHTML = CATEGORIES.map((c) => {
+  $('#catTabs > div').innerHTML = CATEGORIES.map((c) => {
     const on = c.key === S.cat;
     return `<button data-cat="${c.key}" class="rounded-full px-4 py-2 text-sm font-black transition ${on ? 'bg-ink text-white' : 'bg-white text-ink-soft hover:bg-ink/5'}">${esc(c.label)}</button>`;
   }).join('');
 }
 
+const alcKey = (line) => (line.temp ? `${line.id}@${line.temp}` : line.id);
+
 function alcCardHTML(item) {
   const locked = alcLocked();
-  const inCart = S.cart.alc.find((l) => l.id === item.id);
+  const inCart = S.cart.alc.filter((l) => l.id === item.id).reduce((n, l) => n + l.qty, 0);
+  const temps = tempsOf(item.name);
   const badges = [
-    item.spicy ? '<span class="rounded bg-thai-red/10 px-1.5 py-0.5 text-[10px] font-bold text-thai-red">辣</span>' : '',
     item.veg ? '<span class="rounded bg-thai-green/10 px-1.5 py-0.5 text-[10px] font-bold text-thai-green">素</span>' : '',
     item.hot ? '<span class="rounded bg-brand px-1.5 py-0.5 text-[10px] font-bold text-ink">招牌</span>' : '',
   ].join(' ');
+  // 未登入時按鈕要「可按」才會提示登入；已登入但未選套餐才停用
+  const blocked = locked && loggedIn();
+  const label = blocked ? '需先選套餐' : (loggedIn() ? '加入' : '登入後選購');
+  const btnClass = blocked
+    ? 'cursor-not-allowed bg-gray-200 text-gray-400'
+    : (loggedIn() ? 'bg-ink text-white hover:bg-black active:scale-95' : 'bg-siam-purple text-white hover:bg-siam-dark active:scale-95');
   return `<article class="card-enter flex flex-col overflow-hidden rounded-2xl border border-ink/10 bg-white shadow-card ${locked ? 'opacity-70' : ''}">
     <div class="relative">
       ${imgBlock(item.img, item.name, '🍜')}
-      ${inCart ? `<span class="absolute right-2 top-2 rounded-full bg-thai-red px-2 py-0.5 text-[10px] font-black text-white">已選 ${inCart.qty}</span>` : ''}
+      ${inCart ? `<span class="absolute right-2 top-2 rounded-full bg-thai-red px-2 py-0.5 text-[10px] font-black text-white">已選 ${inCart}</span>` : ''}
     </div>
     <div class="flex flex-1 flex-col p-3">
-      <h3 class="text-sm font-black leading-snug">${esc(item.name)} ${badges}</h3>
-      <p class="mt-1 text-[11px] text-ink-mute">${esc(item.unit || (item.alcohol ? '含酒精' : '單點'))}</p>
+      <h3 class="text-sm font-black leading-snug">${esc(item.name)} ${spicyHTML(item.name)} ${badges}</h3>
+      <p class="mt-1 text-[11px] text-ink-mute">${esc(item.unit || (item.alcohol ? '含酒精' : temps.length ? temps.join('／') : '單點'))}</p>
       <div class="mt-auto flex items-center justify-between gap-2 pt-3">
         <span class="text-base font-black text-thai-red">${fmt(item.price)}</span>
-        <button data-add-alc="${item.id}" ${locked ? 'disabled' : ''}
-                class="rounded-full px-3 py-1.5 text-[12px] font-black transition ${locked ? 'cursor-not-allowed bg-gray-200 text-gray-400' : 'bg-ink text-white hover:bg-black active:scale-95'}">
-          ${locked ? '需先選套餐' : '加入'}
-        </button>
+        <button data-add-alc="${item.id}" ${blocked ? 'disabled' : ''}
+                class="rounded-full px-3 py-1.5 text-[12px] font-black transition ${btnClass}">${label}</button>
       </div>
     </div>
   </article>`;
@@ -279,8 +348,53 @@ function renderAlc() {
   const locked = alcLocked();
   $('#alcLock').classList.toggle('hidden', !locked);
   $('#alcHint').textContent = locked
-    ? '先選一份春節套餐即可解鎖單點菜色。'
+    ? (loggedIn() ? '先選一份春節套餐即可解鎖單點菜色。' : '登入並選擇一份春節套餐後，即可加點單點菜色。')
     : '單點已解鎖 ✓ 加點不受套餐規則限制（金額另加 10% 服務費）。';
+}
+
+/* -------- 冰／去冰／熱選擇（單點甜點、飲料） -------- */
+function openTempPicker(itemId) {
+  const item = ALC.find((a) => a.id === itemId);
+  const temps = tempsOf(item.name);
+  if (!temps.length) return addAlcLine(itemId, '');
+  openModal(`
+    <div class="flex items-start justify-between border-b border-ink/10 px-4 py-3">
+      <div>
+        <h3 class="text-lg font-black">${esc(item.name)}</h3>
+        <p class="text-[12px] text-ink-mute">${fmt(item.price)}・請選擇${esc(temps.join('／'))}</p>
+      </div>
+      <button data-close-modal class="grid h-9 w-9 place-items-center rounded-full bg-ink/5">✕</button>
+    </div>
+    <div class="px-4 py-4">
+      <div class="flex flex-wrap gap-2" id="tempChips">
+        ${temps.map((t, i) => `<button class="chip ${i === 0 ? 'on' : ''}" data-temp="${esc(t)}">${esc(t)}</button>`).join('')}
+      </div>
+      <button id="btnTempAdd" class="mt-4 w-full rounded-full bg-brand py-3 text-sm font-black text-ink hover:bg-brand-dark">
+        加入購物車
+      </button>
+    </div>`, {
+    onMount: (root) => {
+      let chosen = temps[0];
+      $$('[data-temp]', root).forEach((b) => b.addEventListener('click', () => {
+        chosen = b.dataset.temp;
+        $$('[data-temp]', root).forEach((x) => x.classList.toggle('on', x === b));
+      }));
+      $('#btnTempAdd', root).addEventListener('click', () => {
+        closeModal();
+        if (needLogin()) return;
+        addAlcLine(itemId, chosen);
+      });
+    },
+  });
+}
+
+function addAlcLine(itemId, temp) {
+  const item = ALC.find((a) => a.id === itemId);
+  const line = S.cart.alc.find((l) => l.id === itemId && (l.temp || '') === (temp || ''));
+  if (line) line.qty += 1; else S.cart.alc.push({ id: itemId, temp: temp || '', qty: 1 });
+  persistCart();
+  renderAll();
+  toast(`${item.name}${temp ? `（${temp}）` : ''} 已加入購物車`);
 }
 
 /* ================================================================ 購物車 */
@@ -288,12 +402,13 @@ function setLineHTML(line) {
   const def = SETS.find((s) => s.id === line.setId);
   if (!def) return '';
   const groups = def.groups.map((g) => {
-    const picked = (line.picks[g.key] || []).join('、') || '—';
-    return `<li><b>${esc(g.label)}：</b>${esc(picked)}</li>`;
+    const picked = (line.picks[g.key] || []).map((p) => esc(p) + spicyHTML(p)).join('、') || '—';
+    return `<li><b>${esc(g.label)}：</b>${picked}</li>`;
   }).join('');
-  const drinks = DRINK_OPTIONS.filter((d) => (line.drinks[d] || 0) > 0)
-    .map((d) => `${esc(d)}×${line.drinks[d]}`).join('、') || '—';
-  const ups = line.upgrades && line.upgrades.length ? `<li><b>升級：</b>${line.upgrades.map(esc).join('、')}（價差現場計）</li>` : '';
+  const drinks = (Array.isArray(line.drinks) ? line.drinks : [])
+    .map((d) => `${esc(d.name)}${d.temp ? `(${esc(d.temp)})` : ''}`).join('、') || '—';
+  const ups = line.upgrades && line.upgrades.length
+    ? `<li><b>升級：</b>${line.upgrades.map(esc).join('、')}（價差現場計）</li>` : '';
   return `<div class="rounded-2xl border border-ink/10 bg-white p-3">
     <div class="flex items-start gap-3">
       <div class="w-20 shrink-0">${imgBlock(def.img, def.name, '🍛')}</div>
@@ -304,7 +419,7 @@ function setLineHTML(line) {
         </div>
         <p class="mt-0.5 text-[11px] text-ink-mute">${esc(def.dishLine)}・${esc(def.rice)}</p>
         <ul class="mt-1.5 space-y-0.5 text-[11px] leading-relaxed text-ink-soft">${groups}
-          <li><b>特選：</b>${def.fixed.map(esc).join('、')}</li>
+          <li><b>特選：</b>${def.fixed.map((f) => esc(f) + spicyHTML(f)).join('、')}</li>
           <li><b>飲料：</b>${drinks}</li>${ups}
         </ul>
         <div class="mt-2 flex items-center justify-between">
@@ -323,16 +438,17 @@ function setLineHTML(line) {
 function alcLineHTML(line) {
   const item = ALC.find((a) => a.id === line.id);
   if (!item) return '';
+  const key = alcKey(line);
   return `<div class="flex items-center gap-3 rounded-2xl border border-ink/10 bg-white p-3">
     <div class="w-16 shrink-0">${imgBlock(item.img, item.name, '🍜')}</div>
     <div class="min-w-0 flex-1">
-      <p class="truncate text-sm font-black">${esc(item.name)}</p>
-      <p class="text-[11px] text-ink-mute">${fmt(item.price)}／份</p>
+      <p class="truncate text-sm font-black">${esc(item.name)} ${spicyHTML(item.name)}</p>
+      <p class="mt-0.5 text-[11px] text-ink-mute">${fmt(item.price)}／份 ${line.temp ? tempChip(line.temp) : ''}</p>
       <div class="mt-1.5 flex items-center gap-2">
-        <button class="qty-btn" data-qty-alc="${line.id}" data-delta="-1">−</button>
+        <button class="qty-btn" data-qty-alc="${esc(key)}" data-delta="-1">−</button>
         <span class="w-6 text-center text-sm font-black">${line.qty}</span>
-        <button class="qty-btn" data-qty-alc="${line.id}" data-delta="1">+</button>
-        <button data-del-alc="${line.id}" class="ml-auto text-[11px] font-bold text-ink-mute hover:text-thai-red">移除</button>
+        <button class="qty-btn" data-qty-alc="${esc(key)}" data-delta="1">+</button>
+        <button data-del-alc="${esc(key)}" class="ml-auto text-[11px] font-bold text-ink-mute hover:text-thai-red">移除</button>
       </div>
     </div>
     <span class="shrink-0 text-base font-black text-thai-red">${fmt(item.price * line.qty)}</span>
@@ -348,7 +464,7 @@ function renderCart() {
       <div>
         <p class="text-4xl">🛒</p>
         <p class="mt-2 font-black">購物車還是空的</p>
-        <p class="mt-1 text-sm text-ink-mute">先挑一份春節套餐，再來加點單點菜色吧！</p>
+        <p class="mt-1 text-sm text-ink-mute">${loggedIn() ? '先挑一份春節套餐，再來加點單點菜色吧！' : '登入後就可以開始點餐。'}</p>
         <a href="#sets" data-close-cart class="mt-3 inline-block rounded-full bg-ink px-5 py-2 text-sm font-bold text-white">去挑套餐</a>
       </div></div>`;
   } else {
@@ -363,6 +479,7 @@ function renderCart() {
 
   const perPerson = c.headcount ? c.subtotal / c.headcount : 0;
   const lowSpend = c.headcount > 0 && perPerson < CFG.rules.minSpendPerPerson;
+  const canCheckout = c.count && !alcLocked() && loggedIn();
   $('#cartFoot').innerHTML = `
     <div class="space-y-1.5 text-sm">
       <div class="flex justify-between"><span class="text-ink-mute">套餐小計</span><span class="font-bold">${fmt(c.setsSubtotal)}</span></div>
@@ -374,9 +491,9 @@ function renderCart() {
       ${c.headcount ? `<p class="text-right text-[11px] ${lowSpend ? 'font-bold text-thai-red' : 'text-ink-mute'}">
         用餐人數 ${c.headcount} 人・每人平均 ${fmt(round(perPerson))}${lowSpend ? `（未達最低消費 ${fmt(CFG.rules.minSpendPerPerson)}）` : ''}</p>` : ''}
     </div>
-    <button id="btnCheckout" ${c.count && !alcLocked() ? '' : 'disabled'}
-      class="mt-3 w-full rounded-full py-3.5 text-sm font-black transition ${c.count && !alcLocked() ? 'bg-brand text-ink hover:bg-brand-dark' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}">
-      ${alcLocked() ? '請先選擇春節套餐' : '前往填寫訂購資料'}
+    <button id="btnCheckout" ${canCheckout ? '' : 'disabled'}
+      class="mt-3 w-full rounded-full py-3.5 text-sm font-black transition ${canCheckout ? 'bg-brand text-ink hover:bg-brand-dark' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}">
+      ${!loggedIn() ? '登入後才能結帳' : (alcLocked() ? '請先選擇春節套餐' : '前往填寫訂購資料')}
     </button>
     <p class="mt-2 text-center text-[11px] text-ink-mute">送出即代表同意門市訂購規則；現場結帳（無線上金流）</p>`;
 
@@ -403,7 +520,7 @@ function openLogin() {
     <div class="flex items-start justify-between border-b border-ink/10 px-4 py-3">
       <div>
         <h3 class="text-lg font-black">手機號碼登入</h3>
-        <p class="text-[12px] text-ink-mute">用電話號碼預先訂餐、之後可修改或取消自己的訂單</p>
+        <p class="text-[12px] text-ink-mute">登入後才能選購餐點，也可修改或取消自己的訂單</p>
       </div>
       <button data-close-modal class="grid h-9 w-9 place-items-center rounded-full bg-ink/5">✕</button>
     </div>
@@ -424,7 +541,7 @@ function openLogin() {
         <input name="pin" required inputmode="numeric" maxlength="4" placeholder="例如 1234"
                class="mt-1 w-full rounded-xl border border-ink/15 px-3 py-2.5 text-sm tracking-[.4em] outline-none focus:border-ink">
       </label>
-      <button class="w-full rounded-full bg-brand py-3 text-sm font-black text-ink hover:bg-brand-dark">登入／註冊</button>
+      <button class="w-full rounded-full bg-siam-purple py-3 text-sm font-black text-white hover:bg-siam-dark">登入／註冊</button>
       <p class="rounded-xl bg-amber-50 px-3 py-2 text-[11px] leading-relaxed text-amber-900">
         ⓘ 本網站無後端伺服器：帳號與訂單紀錄僅儲存在<b>這支裝置的瀏覽器</b>內（換裝置請重新登入）。
         為保護隱私，請勿使用您在別處使用過的密碼。
@@ -449,10 +566,11 @@ function openLogin() {
         save(LS.users, S.users);
         S.user = { name, phone };
         save(LS.user, S.user);
+        const draft = S.draft;   // 若正在選套餐，登入後回到原畫面
         closeModal();
-        renderMember();
         renderAll();
-        toast(`歡迎，${name}！`);
+        if (draft) openSetConfig(draft.setId, draft);
+        toast(`歡迎，${name}！可以開始選購了`);
       });
     },
   });
@@ -460,6 +578,7 @@ function openLogin() {
 
 function renderMember() {
   const card = $('#memberCard');
+  $('#loginPrompt').classList.toggle('hidden', loggedIn());
   if (!S.user) {
     card.classList.add('hidden');
     $('#loginLabel').textContent = '登入';
@@ -469,9 +588,9 @@ function renderMember() {
   card.classList.remove('hidden');
   $('#loginLabel').textContent = S.user.name;
   card.innerHTML = `<div class="flex flex-wrap items-center gap-3">
-    <span class="grid h-11 w-11 place-items-center rounded-full bg-brand text-lg font-black">${esc(S.user.name.slice(0, 1))}</span>
+    <span class="grid h-11 w-11 place-items-center rounded-full bg-siam-purple text-lg font-black text-white">${esc(S.user.name.slice(0, 1))}</span>
     <div class="min-w-0">
-      <p class="font-black">${esc(S.user.name)} <span class="text-[11px] font-normal text-ink-mute">已登入</span></p>
+      <p class="font-black">${esc(S.user.name)} <span class="text-[11px] font-normal text-ink-mute">已登入・可以選購</span></p>
       <p class="text-[12px] text-ink-mute">${esc(S.user.phone)}・本機訂單 ${mine.length} 筆</p>
     </div>
     <div class="ml-auto flex gap-2">
@@ -483,8 +602,8 @@ function renderMember() {
   $('#btnLogout').addEventListener('click', () => {
     S.user = null;
     save(LS.user, null);
-    renderMember();
-    toast('已登出');
+    renderAll();
+    toast('已登出，登出後只能瀏覽菜單');
   });
 }
 
@@ -543,24 +662,18 @@ function openMyOrders() {
 }
 
 /* ================================================================ 結帳 */
-function pickupOptions() {
-  const o = CFG.orders;
-  return { date: o.openFrom, min: o.openFrom, max: o.openTo, slots: o.timeSlots };
-}
-
 function openCheckout() {
+  if (!loggedIn()) { toast('請先登入才能結帳'); return openLogin(); }
   if (alcLocked()) return toast('請先選擇一份春節套餐');
   if (!calc().count) return toast('購物車是空的');
-  if (!S.user) { toast('請先用手機號碼登入'); return openLogin(); }
 
   const c = calc();
-  const { min, max, slots } = pickupOptions();
-  const defaultDate = min;
+  const { min, max, slots } = { min: CFG.orders.openFrom, max: CFG.orders.openTo, slots: CFG.orders.timeSlots };
 
   openModal(`
     <div class="flex items-start justify-between border-b border-ink/10 px-4 py-3">
       <div>
-        <h3 class="text-lg font-black">③ 填寫訂購資料</h3>
+        <h3 class="text-lg font-black">填寫訂購資料</h3>
         <p class="text-[12px] text-ink-mute">${S.editing ? `修改訂單 ${esc(S.editing)}` : '送出後我們會替您備餐'}</p>
       </div>
       <button data-close-modal class="grid h-9 w-9 place-items-center rounded-full bg-ink/5">✕</button>
@@ -579,7 +692,7 @@ function openCheckout() {
         </label>
         <label class="block">
           <span class="text-[12px] font-black">預計取餐日 *</span>
-          <input name="date" type="date" required min="${min}" max="${max}" value="${defaultDate}"
+          <input name="date" type="date" required min="${min}" max="${max}" value="${min}"
                  class="mt-1 w-full rounded-xl border border-ink/15 px-3 py-2.5 text-sm outline-none focus:border-ink">
         </label>
         <label class="block">
@@ -611,9 +724,7 @@ function openCheckout() {
       </button>
       <p class="text-center text-[11px] text-ink-mute">本頁不含線上付款，款項請於現場結清</p>
     </form>`, {
-    onMount: (root) => {
-      $('#orderForm', root).addEventListener('submit', submitOrder);
-    },
+    onMount: (root) => { $('#orderForm', root).addEventListener('submit', submitOrder); },
   });
 }
 
@@ -622,13 +733,13 @@ function buildSummary() {
   const setLines = S.cart.sets.map((line) => {
     const def = SETS.find((s) => s.id === line.setId);
     const picks = def.groups.map((g) => `${g.label}:${(line.picks[g.key] || []).join('/')}`).join(' ');
-    const drinks = DRINK_OPTIONS.filter((d) => (line.drinks[d] || 0) > 0).map((d) => `${d}x${line.drinks[d]}`).join('/');
+    const drinks = (line.drinks || []).map((d) => `${d.name}${d.temp ? `(${d.temp})` : ''}`).join('/');
     const ups = (line.upgrades || []).length ? ` 升級:${line.upgrades.join('/')}` : '';
     return `${def.name} x${line.qty} [${picks} | 特選:${def.fixed.join('/')} | 飲料:${drinks}${ups}]`;
   });
   const alcLines = S.cart.alc.map((line) => {
     const item = ALC.find((a) => a.id === line.id);
-    return `${item.name} x${line.qty}`;
+    return `${item.name}${line.temp ? `(${line.temp})` : ''} x${line.qty}`;
   });
   return { setLines, alcLines };
 }
@@ -636,15 +747,14 @@ function buildSummary() {
 function makeOrderId() {
   const d = new Date();
   const p = (n) => String(n).padStart(2, '0');
-  const stamp = `${String(d.getFullYear()).slice(2)}${p(d.getMonth() + 1)}${p(d.getDate())}${p(d.getHours())}${p(d.getMinutes())}`;
-  return `XT${stamp}${Math.floor(Math.random() * 900 + 100)}`;
+  return `XT${String(d.getFullYear()).slice(2)}${p(d.getMonth() + 1)}${p(d.getDate())}${p(d.getHours())}${p(d.getMinutes())}${Math.floor(Math.random() * 900 + 100)}`;
 }
 
 async function submitOrder(ev) {
   ev.preventDefault();
-  const form = ev.target;
+  if (!loggedIn()) { toast('請先登入才能送出訂單'); return openLogin(); }
+  const f = ev.target;
   const btn = $('#btnSubmit');
-  const f = form;
   const name = f.name.value.trim();
   const phone = f.phone.value.replace(/\D/g, '');
   const date = f.date.value;
@@ -661,15 +771,13 @@ async function submitOrder(ev) {
   const { setLines, alcLines } = buildSummary();
   const orderId = S.editing || makeOrderId();
   const act = S.editing ? '修改訂單' : '新訂單';
-  const pickup = `${date} ${time}`;
-  const now = new Date().toLocaleString('zh-TW', { hour12: false });
 
   const values = {
     orderId,
     action: act,
     name,
     phone,
-    pickup,
+    pickup: `${date} ${time}`,
     headcount: `${c.headcount} 人`,
     sets: setLines.join(' ｜ ') || '無',
     setsTotal: String(c.setsSubtotal),
@@ -678,7 +786,7 @@ async function submitOrder(ev) {
     service: String(c.service),
     total: String(c.total),
     note: note || '無',
-    ts: now,
+    ts: new Date().toLocaleString('zh-TW', { hour12: false }),
   };
 
   btn.disabled = true;
@@ -690,9 +798,8 @@ async function submitOrder(ev) {
     console.warn('form post failed', err);
   }
 
-  // 存本機紀錄（同時作為「修改自己的訂單」的資料來源）
   const record = {
-    orderId, phone, name, pickup, headcount: c.headcount, total: c.total,
+    orderId, phone, name, pickup: values.pickup, headcount: c.headcount, total: c.total,
     status: act, ts: Date.now(), note,
     summary: [...setLines, ...alcLines].join(' ｜ '),
     cart: JSON.parse(JSON.stringify(S.cart)),
@@ -705,7 +812,6 @@ async function submitOrder(ev) {
   S.cart = { sets: [], alc: [] };
   persistCart();
   renderAll();
-
   showSuccess(record, delivered);
 }
 
@@ -720,7 +826,6 @@ async function postToGoogleForm(values) {
   Object.entries(entries).forEach(([field, entryId]) => {
     if (entryId && values[field] != null) body.append(entryId, values[field]);
   });
-  // 帶上送出輔助參數（Google 表單官網表單不需要，但無害）
   body.append('fvv', '1');
   body.append('pageHistory', '0');
   await fetch(action, {
@@ -780,10 +885,9 @@ async function cancelOrder(orderId) {
   const o = S.orders.find((x) => x.orderId === orderId);
   if (!o) return;
   if (!confirm(`確定要取消訂單 ${orderId} 嗎？`)) return;
-  const { setLines, alcLines } = { setLines: [o.summary], alcLines: [] };
   const values = {
     orderId, action: '取消訂單', name: o.name, phone: o.phone, pickup: o.pickup,
-    headcount: `${o.headcount} 人`, sets: setLines.join(' '), setsTotal: '', alacarte: alcLines.join(''),
+    headcount: `${o.headcount} 人`, sets: o.summary, setsTotal: '', alacarte: '',
     alacarteTotal: '', service: '', total: String(o.total), note: o.note || '無',
     ts: new Date().toLocaleString('zh-TW', { hour12: false }),
   };
@@ -793,22 +897,21 @@ async function cancelOrder(orderId) {
   o.ts = Date.now();
   save(LS.orders, S.orders);
   closeModal();
-  renderMember();
+  renderAll();
   toast(delivered ? '已送出取消通知' : '已取消（示範模式，僅更新本機紀錄）');
 }
 
 /* ================================================================ 事件綁定 */
 function bindEvents() {
-  // 套餐選配彈窗
   document.addEventListener('click', (e) => {
-    const t = e.target.closest('[data-config-set],[data-pick],[data-drink],[data-upgrade],[data-add-set],[data-close-modal],[data-close-cart],[data-add-alc],[data-qty-alc],[data-del-alc],[data-qty-set],[data-del-set],[data-cat],[data-edit-order],[data-cancel-order]');
+    const t = e.target.closest('[data-config-set],[data-pick],[data-upgrade],[data-add-set],[data-close-modal],[data-close-cart],[data-add-alc],[data-qty-alc],[data-del-alc],[data-qty-set],[data-del-set],[data-cat],[data-edit-order],[data-cancel-order]');
     if (!t) return;
     const d = t.dataset;
 
-    if (d.configSet) return openSetConfig(d.configSet);
+    if (d.configSet !== undefined) return openSetConfig(d.configSet);
     if (d.closeModal !== undefined) return closeModal();
 
-    if (d.pick) {
+    if (d.pick !== undefined) {   // 空字串屬性也是假值，一律用 !== undefined 判斷
       const g = SETS.find((s) => s.id === S.draft.setId).groups.find((x) => x.key === d.pick);
       const arr = S.draft.picks[d.pick];
       const i = arr.indexOf(d.value);
@@ -817,77 +920,64 @@ function bindEvents() {
       else { arr.shift(); arr.push(d.value); toast(`「${g.label}」最多選 ${g.pick} 道，已自動替換`); }
       return syncDraftUI();
     }
-    if (d.drink) {
-      const def = SETS.find((s) => s.id === S.draft.setId);
-      const cur = DRINK_OPTIONS.reduce((n, x) => n + (S.draft.drinks[x] || 0), 0);
-      const next = (S.draft.drinks[d.drink] || 0) + Number(d.delta);
-      if (next < 0) return;
-      if (Number(d.delta) > 0 && cur >= def.drinkPick) return toast(`飲料最多選 ${def.drinkPick} 杯`);
-      S.draft.drinks[d.drink] = next;
-      return syncDraftUI();
-    }
-    if (d.upgrade) {
+    if (d.upgrade !== undefined) {
       const i = S.draft.upgrades.indexOf(d.upgrade);
       if (i >= 0) S.draft.upgrades.splice(i, 1); else S.draft.upgrades.push(d.upgrade);
       return syncDraftUI();
     }
-    if (d.addSet !== undefined) { // 空字串屬性也是假值，必須用 !== undefined 判斷
+    if (d.addSet !== undefined) {
+      if (!loggedIn()) return needLogin('請先登入才能把套餐加入購物車');
       const existing = S.cart.sets.findIndex((l) => l.lineId === S.draft.lineId);
       if (existing >= 0) S.cart.sets[existing] = S.draft; else S.cart.sets.push(S.draft);
       S.draft = null;
-      persistCart();
-      closeModal();
-      renderAll();
+      persistCart(); closeModal(); renderAll();
       toast('套餐已加入購物車');
       return;
     }
-    if (d.addAlc) {
+    if (d.addAlc !== undefined) {
+      if (needLogin('請先登入才能選購餐點')) return;
       if (alcLocked()) return toast('請先選擇一份春節套餐才能加點單點');
       const item = ALC.find((a) => a.id === d.addAlc);
-      const line = S.cart.alc.find((l) => l.id === d.addAlc);
-      if (line) line.qty += 1; else S.cart.alc.push({ id: d.addAlc, qty: 1 });
-      persistCart(); renderAll();
-      return toast(`${item.name} 已加入購物車`);
+      if (tempsOf(item.name).length) return openTempPicker(d.addAlc);
+      return addAlcLine(d.addAlc, '');
     }
-    if (d.qtyAlc) {
-      const line = S.cart.alc.find((l) => l.id === d.qtyAlc);
-      const item = ALC.find((a) => a.id === d.qtyAlc);
+    if (d.qtyAlc !== undefined) {
+      const [id, temp = ''] = d.qtyAlc.split('@');
+      const line = S.cart.alc.find((l) => l.id === id && (l.temp || '') === temp);
+      if (!line) return;
       line.qty += Number(d.delta);
-      if (line.qty <= 0) S.cart.alc = S.cart.alc.filter((l) => l.id !== d.qtyAlc);
+      if (line.qty <= 0) S.cart.alc = S.cart.alc.filter((l) => l !== line);
       else if (line.qty > 20) { line.qty = 20; toast('單一品項最多 20 份'); }
       persistCart(); renderAll();
       return;
     }
-    if (d.delAlc) {
-      S.cart.alc = S.cart.alc.filter((l) => l.id !== d.delAlc);
+    if (d.delAlc !== undefined) {
+      const [id, temp = ''] = d.delAlc.split('@');
+      S.cart.alc = S.cart.alc.filter((l) => !(l.id === id && (l.temp || '') === temp));
       persistCart(); renderAll(); return toast('已移除');
     }
-    if (d.qtySet) {
+    if (d.qtySet !== undefined) {
       const line = S.cart.sets.find((l) => l.lineId === d.qtySet);
       line.qty += Number(d.delta);
       if (line.qty <= 0) S.cart.sets = S.cart.sets.filter((l) => l.lineId !== d.qtySet);
       else if (line.qty > 20) line.qty = 20;
       persistCart(); renderAll(); return;
     }
-    if (d.delSet) {
+    if (d.delSet !== undefined) {
       S.cart.sets = S.cart.sets.filter((l) => l.lineId !== d.delSet);
       persistCart(); renderAll(); return toast('已移除套餐');
     }
-    if (d.cat) { S.cat = d.cat; renderTabs(); renderAlc(); return; }
-    if (d.editOrder) return loadOrderForEdit(d.editOrder);
-    if (d.cancelOrder) return cancelOrder(d.cancelOrder);
-
-    if (d.closeCart !== undefined) {
-      if (t.tagName === 'A') { toggleCart(false); } else { toggleCart(false); }
-      return;
-    }
+    if (d.cat !== undefined) { S.cat = d.cat; renderTabs(); renderAlc(); return; }
+    if (d.editOrder !== undefined) return loadOrderForEdit(d.editOrder);
+    if (d.cancelOrder !== undefined) return cancelOrder(d.cancelOrder);
+    if (d.closeCart !== undefined) return toggleCart(false);
   });
 
-  // 抽屜／頂部按鈕
   $('#btnCartTop').addEventListener('click', () => toggleCart());
   $('#btnCartBar').addEventListener('click', () => toggleCart());
   $('#cartOverlay').addEventListener('click', () => toggleCart(false));
   $('#btnLogin').addEventListener('click', () => (S.user ? openMyOrders() : openLogin()));
+  $('#btnLoginPrompt').addEventListener('click', openLogin);
   $('#btnOrdersHero').addEventListener('click', () => (S.user ? openMyOrders() : openLogin()));
 }
 

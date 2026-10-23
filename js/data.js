@@ -1,13 +1,51 @@
 /* =============================================================================
- *  【饗泰多】2027 春節內用預訂 — 菜單資料
+ *  【饗泰多 SIAM MORE】2027 春節內用預訂 — 菜單資料
  *  資料來源：門市「2027 年春節內用菜單」PDF
  *  - 套餐：需先選套餐才能單點加點（見 CONFIG.rules）
  *  - 單點價目、套餐組合與「選 N」規則完全依照 PDF
+ *  - 辣度（辣椒圖示數量）逐項依照 PDF 標示
+ *  - 冰／去冰／熱選項依照 PDF 標示，泰式奶茶另提供「去冰」
  *  圖片：assets/img/<key>.jpg（Wikimedia Commons 免費授權，見 assets/img/credits.json；
  *        若檔案不存在，前端會自動以品牌色浮水印卡片代替）
  * ========================================================================== */
 
 const IMG = (key) => `assets/img/${key}.jpg`;
+
+/* ---------------------------------------------------------------------------
+ *  辣度表：數字 = PDF 上該道菜的辣椒圖示數量（0/1/2）
+ *  查詢時會自動去掉「（大）」「（10 塊）」等後綴
+ * ------------------------------------------------------------------------ */
+const SPICY = {
+  '香煎瀑布牛涼拌': 1, '酸辣海鮮涼拌': 2, '現搗青木瓜涼拌': 1,
+  '瑪莎曼燉牛肉': 1, '泰香炙烤牛小排': 0, '爆爽辣炒牛': 2, '蠔氣爆炒牛': 0,
+  '蜜醬炙烤肋排': 0, '秘醬炙烤肋排': 0, '扒飯打拋豬': 2, '香烤松阪豬': 0,
+  '黃金咖哩雞': 0, '咔滋椒麻雞': 2, '帕能咖哩雞': 1,
+  '厚煎海鮮烘蛋': 0, '泰滑蝦扯蛋': 0, '金湯椰香豆腐煲': 0,
+  '冠軍月亮蝦餅': 0, '黃咖哩軟殼蟹': 1, '檸香蒸扁鱈': 2, '檸香酸辣小卷': 1,
+  '清香檸檬魚': 1,
+  '泰香炒野蓮': 0, '泰炒什錦蔬菜': 0, '蒜香乾蝦小豆苗': 0,
+  '冬蔭海鮮湯': 2, '蝦仁玉米湯': 0, '香茅椰肉蛤蜊雞湯': 0, '青檸酸辣海鮮湯': 2,
+  '蛋素青木瓜涼拌': 0, '清炒水蓮': 0, '清炒什錦蔬菜': 0, '鮮菇玉米湯': 0, '香茅椰肉野菇湯': 0,
+  '摩摩喳喳': 0, '椰香黑糯米': 0,
+  '泰式奶茶': 0, '檸檬茶': 0, '荔枝冰茶啵啵': 0, '泰象啤酒': 0, '臺虎嗨啤': 0, '可樂': 0,
+  '泰國香米飯': 0, '蒜酥松阪蝦醬拌飯': 0,
+};
+
+/** 去掉「（大）」「(大)」「（10 塊）」等後綴 */
+const stripSize = (name) => String(name).replace(/[（(][^）)]*[）)]/g, '').trim();
+
+/** 取某道菜的辣度（0 = 不辣） */
+const spicyOf = (name) => SPICY[stripSize(name)] ?? 0;
+
+/* ---------------------------------------------------------------------------
+ *  冰／去冰／熱選項（依 PDF：摩摩喳喳 冰/去冰、椰香黑糯米 冷/熱、泰式奶茶 冰/熱 + 去冰）
+ * ------------------------------------------------------------------------ */
+const TEMPS = {
+  '泰式奶茶': ['冰', '去冰', '熱'],
+  '摩摩喳喳': ['冰', '去冰'],
+  '椰香黑糯米': ['冷', '熱'],
+};
+const tempsOf = (name) => TEMPS[stripSize(name)] || [];
 
 /* 套餐的「飲料升級」選項（PDF：可加價升級酒類/特調飲品；價差依現場公告，購物車不加價） */
 const DRINK_UPGRADES = ['荔枝冰茶啵啵', '泰象啤酒', '臺虎嗨啤'];
@@ -129,23 +167,23 @@ const ALC = [
   { id: 'a02', cat: 'cold',    name: '酸辣海鮮涼拌',     price: 400, img: IMG('seafoodsalad') },
   { id: 'a03', cat: 'cold',    name: '現搗青木瓜涼拌',   price: 270, img: IMG('somitam') },
 
-  { id: 'a04', cat: 'beef',    name: '瑪莎曼燉牛肉',     price: 510, img: IMG('massaman'), spicy: false },
+  { id: 'a04', cat: 'beef',    name: '瑪莎曼燉牛肉',     price: 510, img: IMG('massaman') },
   { id: 'a05', cat: 'beef',    name: '泰香炙烤牛小排',   price: 710, img: IMG('shortrib') },
-  { id: 'a06', cat: 'beef',    name: '爆爽辣炒牛',       price: 360, img: IMG('stirfrybeef'), spicy: true },
+  { id: 'a06', cat: 'beef',    name: '爆爽辣炒牛',       price: 360, img: IMG('stirfrybeef') },
   { id: 'a07', cat: 'beef',    name: '蠔氣爆炒牛',       price: 360, img: IMG('oysterbeef') },
 
   { id: 'a08', cat: 'pork',    name: '蜜醬炙烤肋排',     price: 610, img: IMG('spareribs') },
-  { id: 'a09', cat: 'pork',    name: '扒飯打拋豬',       price: 320, img: IMG('krapao'), spicy: true },
+  { id: 'a09', cat: 'pork',    name: '扒飯打拋豬',       price: 320, img: IMG('krapao') },
   { id: 'a10', cat: 'pork',    name: '香烤松阪豬',       price: 390, img: IMG('porkneck') },
 
   { id: 'a11', cat: 'chicken', name: '黃金咖哩雞',       price: 330, img: IMG('yellowcurry') },
-  { id: 'a12', cat: 'chicken', name: '咔滋椒麻雞',       price: 330, img: IMG('crispychicken'), spicy: true },
+  { id: 'a12', cat: 'chicken', name: '咔滋椒麻雞',       price: 330, img: IMG('crispychicken') },
   { id: 'a13', cat: 'chicken', name: '帕能咖哩雞',       price: 350, img: IMG('panang') },
 
   { id: 'a14', cat: 'seafood', name: '冠軍月亮蝦餅',     price: 480, img: IMG('fishcake'), hot: true },
   { id: 'a15', cat: 'seafood', name: '黃咖哩軟殼蟹',     price: 580, img: IMG('softshell') },
   { id: 'a16', cat: 'seafood', name: '檸香蒸扁鱈',       price: 500, img: IMG('halibut') },
-  { id: 'a17', cat: 'seafood', name: '檸香酸辣小卷',     price: 480, img: IMG('squid'), spicy: true },
+  { id: 'a17', cat: 'seafood', name: '檸香酸辣小卷',     price: 480, img: IMG('squid') },
 
   { id: 'a18', cat: 'eggtofu', name: '厚煎海鮮烘蛋',     price: 330, img: IMG('omelette') },
   { id: 'a19', cat: 'eggtofu', name: '泰滑蝦扯蛋',       price: 350, img: IMG('shrimpegg') },
@@ -155,10 +193,10 @@ const ALC = [
   { id: 'a22', cat: 'veg',     name: '泰炒什錦蔬菜',     price: 240, img: IMG('mixedveg') },
   { id: 'a23', cat: 'veg',     name: '蒜香乾蝦小豆苗',   price: 350, img: IMG('peashoots') },
 
-  { id: 'a24', cat: 'soup',    name: '冬蔭海鮮湯',       price: 390, img: IMG('tomyam'), spicy: true },
+  { id: 'a24', cat: 'soup',    name: '冬蔭海鮮湯',       price: 390, img: IMG('tomyam') },
   { id: 'a25', cat: 'soup',    name: '蝦仁玉米湯',       price: 380, img: IMG('cornshrimp') },
   { id: 'a26', cat: 'soup',    name: '香茅椰肉蛤蜊雞湯', price: 380, img: IMG('tomkha') },
-  { id: 'a27', cat: 'soup',    name: '青檸酸辣海鮮湯',   price: 420, img: IMG('sourtomsoup'), spicy: true },
+  { id: 'a27', cat: 'soup',    name: '青檸酸辣海鮮湯',   price: 420, img: IMG('sourtomsoup') },
 
   { id: 'a28', cat: 'veggie',  name: '蛋素青木瓜涼拌',   price: 260, img: IMG('vegsomtam'), veg: true },
   { id: 'a29', cat: 'veggie',  name: '清炒水蓮',         price: 220, img: IMG('waterlily'), veg: true },
@@ -169,7 +207,7 @@ const ALC = [
   { id: 'a33', cat: 'dessert', name: '摩摩喳喳',         price: 100, img: IMG('momo'), unit: '冰／去冰' },
   { id: 'a34', cat: 'dessert', name: '椰香黑糯米',       price: 100, img: IMG('blackrice'), unit: '冷／熱' },
 
-  { id: 'a35', cat: 'drink',   name: '泰式奶茶',         price: 120, img: IMG('thaitea'), unit: '冰／熱' },
+  { id: 'a35', cat: 'drink',   name: '泰式奶茶',         price: 120, img: IMG('thaitea'), unit: '冰／去冰／熱' },
   { id: 'a36', cat: 'drink',   name: '檸檬茶',           price: 120, img: IMG('lemontea') },
   { id: 'a37', cat: 'drink',   name: '荔枝冰茶啵啵',     price: 150, img: IMG('lycheetea') },
   { id: 'a38', cat: 'drink',   name: '泰象啤酒',         price: 150, img: IMG('changbeer'), alcohol: true },
@@ -184,4 +222,4 @@ const ALC = [
 const DRINK_OPTIONS = ['泰式奶茶', '檸檬茶'];
 
 /* 供 app.js 使用 */
-window.MENU = { SETS, ALC, CATEGORIES, DRINK_OPTIONS, DRINK_UPGRADES };
+window.MENU = { SETS, ALC, CATEGORIES, DRINK_OPTIONS, DRINK_UPGRADES, SPICY, TEMPS, spicyOf, tempsOf, stripSize };
