@@ -57,7 +57,10 @@
 
 <!-- ============================ 主視覺 ============================ -->
 <section class="relative overflow-hidden bg-brand">
-  <img src="assets/img/hero.jpg" alt="饗泰多除夕年菜" class="absolute inset-0 h-full w-full object-cover opacity-95" onerror="this.style.display='none'">
+  <picture>
+    <source media="(max-width: 640px)" srcset="assets/img/hero-mobile.jpg">
+    <img src="assets/img/hero.jpg" alt="饗泰多除夕年菜" class="absolute inset-0 h-full w-full object-cover opacity-95" onerror="this.style.display='none'">
+  </picture>
   <div class="absolute inset-0 bg-gradient-to-r from-ink/95 via-ink/82 to-ink/45"></div>
   <div class="relative mx-auto max-w-6xl px-4 py-10 sm:py-16">
     <div class="mb-1 flex w-fit items-center rounded-2xl bg-ink/60 px-3 py-2 backdrop-blur-sm">

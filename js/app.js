@@ -116,8 +116,8 @@ $('#modal').addEventListener('click', (e) => { if (e.target.id === 'modal') clos
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeModal(); toggleCart(false); } });
 
 /* ---------------------------------------------------------------- 圖片 */
-function imgBlock(src, alt, emoji = '🍲') {
-  return `<div class="group relative aspect-[4/3] w-full overflow-hidden rounded-xl img-fallback">
+function imgBlock(src, alt, emoji = '🍲', aspect = 'aspect-[4/3]') {
+  return `<div class="group relative ${aspect} w-full overflow-hidden rounded-xl img-fallback">
       <span class="absolute inset-0 grid place-items-center text-4xl">${emoji}</span>
       <span class="absolute inset-x-0 bottom-0 bg-black/35 px-2 py-1 text-[10px] font-bold text-white/90">饗泰多</span>
       <img src="${esc(src)}" alt="${esc(alt)}" loading="lazy"
@@ -134,7 +134,7 @@ function setCardHTML(def) {
   const openLabel = loggedIn() ? '挑選菜色並加入購物車' : '查看菜色內容（登入後才能選購）';
   return `<article class="card-enter overflow-hidden rounded-3xl border border-ink/10 bg-white shadow-card">
     <div class="relative">
-      ${imgBlock(def.img, def.name, '🍛')}
+      ${imgBlock(def.img, def.name, '🍛', 'aspect-[3/2]')}
       <span class="absolute left-3 top-3 rounded-full bg-ink px-3 py-1 text-[11px] font-black text-brand">${def.people} 人套餐</span>
       <span class="absolute right-3 top-3 rounded-full bg-brand px-3 py-1 text-[11px] font-black text-ink">${esc(def.dishLine)}</span>
     </div>
@@ -333,6 +333,7 @@ function alcCardHTML(item) {
     <div class="flex flex-1 flex-col p-3">
       <h3 class="text-sm font-black leading-snug">${esc(item.name)} ${spicyHTML(item.name)} ${badges}</h3>
       <p class="mt-1 text-[11px] text-ink-mute">${esc(item.unit || (item.alcohol ? '含酒精' : temps.length ? temps.join('／') : '單點'))}</p>
+      ${item.desc ? `<p class="mt-1.5 line-clamp-2 text-[11px] leading-relaxed text-ink-soft/80">${esc(item.desc)}</p>` : ''}
       <div class="mt-auto flex items-center justify-between gap-2 pt-3">
         <span class="text-base font-black text-thai-red">${fmt(item.price)}</span>
         <button data-add-alc="${item.id}" ${blocked ? 'disabled' : ''}
@@ -411,7 +412,7 @@ function setLineHTML(line) {
     ? `<li><b>升級：</b>${line.upgrades.map(esc).join('、')}（價差現場計）</li>` : '';
   return `<div class="rounded-2xl border border-ink/10 bg-white p-3">
     <div class="flex items-start gap-3">
-      <div class="w-20 shrink-0">${imgBlock(def.img, def.name, '🍛')}</div>
+      <div class="w-20 shrink-0">${imgBlock(def.img, def.name, '🍛', 'aspect-[3/2]')}</div>
       <div class="min-w-0 flex-1">
         <div class="flex items-start justify-between gap-2">
           <p class="text-sm font-black leading-snug">${esc(def.name)}</p>
