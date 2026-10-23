@@ -4,7 +4,8 @@
  * 這一支腳本同時扮演「資料庫 API」與「設定工具」，不需要 Google 表單。
  *
  * ── 架構 ─────────────────────────────────────────────────────────
- *   [訂位表]  姓名｜電話｜驗證碼｜人數｜桌號｜已報到      ← 員工維護（檔案保持私有）
+ *   [訂位表]  姓名｜電話｜驗證碼                          ← 員工維護（檔案保持私有）
+ *             （只放登入需要的三欄；想另外記人數、桌號可以自己加，腳本用標題比對，不受影響）
  *   [訂單表]  自動建立，顧客點餐直接寫入（同一訂單編號會覆蓋同一列）
  *   doGet  ?phone=&code=      → 驗證登入（只回傳 ok／姓名，名單不外流）
  *   doPost {action, ...}      → 新增／修改／取消訂單（需通過電話+驗證碼驗證）
@@ -30,7 +31,7 @@ const ORDER_HEADERS = [
   '套餐內容', '套餐金額', '單點內容', '單點金額', '服務費', '總金額', '備註', '最後更新',
 ];
 
-const RESERVATION_HEADERS = ['姓名', '電話', '驗證碼', '人數', '桌號', '已報到'];
+const RESERVATION_HEADERS = ['姓名', '電話', '驗證碼'];
 
 const CODE_LENGTH = 4;          // 驗證碼長度（要更安全可改 6）
 const MAX_FAIL_PER_HOUR = 8;    // 同一支電話每小時最多錯幾次驗證碼
@@ -47,7 +48,7 @@ function setupAll() {
   return out;
 }
 
-/** 訂位表：建立／確認欄位（姓名｜電話｜驗證碼｜人數｜桌號｜已報到） */
+/** 訂位表：建立／確認欄位（姓名｜電話｜驗證碼；不含報到、桌號等欄位） */
 function setupReservationSheet(report) {
   const ss = SpreadsheetApp.openById(RESERVATION_SHEET_ID);
   let sheet = ss.getSheetByName(RESERVATION_TAB);
@@ -80,12 +81,34 @@ function setupReservationSheet(report) {
 
   sheet.getRange(1, 1, 1, RESERVATION_HEADERS.length).setFontWeight('bold').setBackground('#FFD400');
   sheet.setFrozenRows(1);
-  sheet.setColumnWidth(1, 110).setColumnWidth(2, 130).setColumnWidth(3, 90);
-  sheet.setColumnWidth(4, 70).setColumnWidth(5, 80).setColumnWidth(6, 90);
+  sheet.setColumnWidth(1, 110).setColumnWidth(2, 130).setColumnWidth(3, 100);
   sheet.getRange('B2:B').setNumberFormat('@');   // 電話當文字
   sheet.getRange('C2:C').setNumberFormat('@');   // 驗證碼當文字（保留前導 0）
-  sheet.getRange('D2:D').setNumberFormat('0');
+
+  // 若之前跑過舊版而留下「已報到／桌號」等欄位，提示一下（不會自動刪，避免動到你的資料）
+  const headerRow = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), RESERVATION_HEADERS.length))
+    .getValues()[0].map(function (h) { return String(h).trim(); });
+  const extra = headerRow.slice(RESERVATION_HEADERS.length).filter(function (h) { return h; });
+  if (extra.length) {
+    report.push('ℹ 第 4 欄之後還有：' + extra.join('、') + '（本系統不使用；要清掉可執行 clearExtraColumns()）');
+  }
   return sheet.getName();
+}
+
+/** 選用：刪掉訂位表上「已報到、桌號、人數」等本系統不使用的欄位（會先回報再刪） */
+function clearExtraColumns() {
+  const ss = SpreadsheetApp.openById(RESERVATION_SHEET_ID);
+  const sheet = ss.getSheetByName(RESERVATION_TAB) || ss.getSheets()[0];
+  const lastCol = sheet.getLastColumn();
+  if (lastCol <= RESERVATION_HEADERS.length) return Logger.log('沒有多餘欄位');
+  const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function (h) { return String(h).trim(); });
+  for (let i = lastCol; i > RESERVATION_HEADERS.length; i--) {
+    if (headers[i - 1]) {
+      Logger.log('刪除欄位 ' + i + '：' + headers[i - 1]);
+      sheet.deleteColumn(i);
+    }
+  }
+  Logger.log('完成，目前欄位：' + sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].join('｜'));
 }
 
 /** 幫「有姓名電話但沒有驗證碼」的列自動產生不重複驗證碼 */
