@@ -33,6 +33,9 @@ const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } cat
 const { SETS, ALC, CATEGORIES, DRINK_OPTIONS, DRINK_UPGRADES, spicyOf, tempsOf } = window.MENU;
 const CFG = window.CONFIG;
 
+/** 統一產生「來電門市 xxx」的字串；沒設門市電話時不要留一個空白的電話 */
+const tel = (verb = '來電門市') => (CFG.brand.phone ? `${verb} ${esc(CFG.brand.phone)}` : '洽門市人員');
+
 /* ---------------------------------------------------------------- 辣度／冰熱 */
 /** 辣度圖示（用門市菜單 PDF 上的辣椒圖） */
 const spicyHTML = (name, cls = 'h-3.5') => {
@@ -694,7 +697,7 @@ function openLogin() {
 
         if (!v.ok) {
           msgBox.className = 'rounded-xl bg-thai-red/10 px-3 py-2 text-[12px] font-bold leading-relaxed text-thai-red';
-          msgBox.innerHTML = `${esc(v.message || '驗證失敗')}<br>需要協助請來電門市 ${esc(CFG.brand.phone || '')}`;
+          msgBox.innerHTML = `${esc(v.message || '驗證失敗')}<br>需要協助請${tel()}`;
           return;
         }
         if (v.error) toast(v.message || '驗證服務連線異常，先讓您繼續點餐', 3600);
@@ -804,7 +807,7 @@ function openMyOrders() {
         const hit = S.orders.find((o) => o.orderId.toUpperCase() === q);
         $('#findResult', root).innerHTML = hit
           ? `找到訂單 <b>${esc(hit.orderId)}</b>（${esc(hit.status)}）總計 ${fmt(hit.total)}；若為本機訂單可直接修改。`
-          : `查無此訂單。無後端架構下僅能查詢本機紀錄，請來電門市 ${esc(CFG.brand.phone)}。`;
+          : `查無此訂單。無後端架構下僅能查詢本機紀錄，請${tel()}。`;
       });
     },
   });
@@ -1037,7 +1040,7 @@ function showSuccess(record, delivered) {
         <button id="btnGoOrders" class="w-full rounded-full bg-ink py-3 text-sm font-black text-white">查看我的訂單（可修改／取消）</button>
         <button data-close-modal class="w-full rounded-full bg-ink/5 py-3 text-sm font-bold">繼續點餐</button>
       </div>
-      <p class="mt-3 text-[11px] text-ink-mute">如需變更，請登入同一支手機號碼後於「我的訂單」修改，或來電 ${esc(CFG.brand.phone)}</p>
+      <p class="mt-3 text-[11px] text-ink-mute">如需變更，請登入同一支手機號碼後於「我的訂單」修改，或${tel()}</p>
     </div>`, {
     onMount: (root) => $('#btnGoOrders', root).addEventListener('click', () => { closeModal(); openMyOrders(); }),
   });

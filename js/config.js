@@ -42,7 +42,7 @@ window.CONFIG = {
   // ---------------------------------------------------------------------------
   staff: {
     // 訂位名單試算表：只分享給員工的 Google 帳號（不要把連結公開）
-    sheetUrl: '',
+    sheetUrl: 'https://docs.google.com/spreadsheets/d/1vDdLKtOsXu_DbLqwxDzd8i_Dlr_Ya95NddFEBKFXOOQ/edit',
     // 訂單回應試算表（Google 表單回應匯集處）
     ordersSheetUrl: '',
     // 值班電話（員工頁顯示）
@@ -54,14 +54,14 @@ window.CONFIG = {
   //   部署方式見 SETUP.md：Apps Script → 部署 → 網頁應用程式（執行身分：我／存取權：任何人）
   // ---------------------------------------------------------------------------
   api: {
-    endpoint: '',   // 例：'https://script.google.com/macros/s/AKfycb.../exec'
+    endpoint: 'https://script.google.com/macros/s/AKfycbyr2cDkJg03gslxl03pzwxmR573WKShHHUDOGaUehTu4dAPtPioZtb2F7Uem7CrmXRm/exec',
   },
 
   reservation: {
     // off      = 不驗證，任何電話都能登入（尚未設定的預設值）
     // endpoint = 用 api.endpoint 驗證「電話 + 驗證碼」（推薦）
     // hashfile = 讀公開雜湊檔（不需後端，但電話可被暴力反推，見 SETUP.md）
-    mode: 'off',
+    mode: 'endpoint',
     // mode='hashfile' 時的雜湊檔路徑
     hashFile: 'data/reservations.json',
     // 需要驗證碼（員工在訂位表給客人的 4 位數）
