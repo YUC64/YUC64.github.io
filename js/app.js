@@ -879,7 +879,9 @@ async function fetchMine() {
   const url = `${API_BASE()}?mine=1&phone=${encodeURIComponent(S.user.phone)}&code=${encodeURIComponent(S.user.code || '')}&t=${Date.now()}`;
   const res = await fetch(url, { cache: 'no-store' });
   const data = await res.json();
-  return data && data.ok ? data : null;
+  // 舊版 Apps Script 不認識 mine，會回傳登入結果（沒有 orders）→ 視為不可用
+  if (!data || !data.ok || !Array.isArray(data.orders)) return null;
+  return data;
 }
 
 function localAsMine() {
@@ -950,8 +952,10 @@ function renderMyOrders(list, offline) {
     </div>
     <div class="space-y-3 px-6 py-5">
       ${cards}
-      ${offline ? `<p class="text-[10px] leading-relaxed tracking-[.06em] text-ink-mute">
-        目前無法連線門市系統，以下為這台裝置的紀錄。</p>` : ''}
+      ${offline ? `<div class="border-t border-[rgba(23,20,15,.1)] pt-3 text-[10px] leading-relaxed tracking-[.06em] text-ink-mute">
+        目前讀不到門市系統，以下為這台裝置的紀錄。若您已重新部署仍看到這段，請下拉重新整理或稍候一分鐘。
+        <button onclick="location.reload(true)" class="ml-1 underline underline-offset-2">重新整理</button>
+      </div>` : ''}
     </div>`, {
     onMount: (root) => {
       const byId = (id) => list.find((o) => o.orderId === id);
