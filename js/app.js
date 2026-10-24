@@ -243,12 +243,12 @@ function openSetConfig(setId, editLine = null) {
         <p class="mt-1 text-[11px] text-ink-mute">每一杯都可以單獨選品項與冰／去冰／熱</p>
         <div class="mt-2 space-y-2">${drinkSlotsHTML()}</div>
       </div>
-      <div class="group-box">
+      ${DRINK_UPGRADES.length ? `<div class="group-box">
         <p class="text-sm font-black">加價升級酒類／特調 <span class="text-ink-mute">（可選，價差依現場公告）</span></p>
         <div class="mt-2 flex flex-wrap gap-1.5">
           ${DRINK_UPGRADES.map((u) => `<button class="chip" data-upgrade="${esc(u)}">${esc(u)}</button>`).join('')}
         </div>
-      </div>
+      </div>` : ''}
     </div>
     <div class="sticky bottom-0 border-t border-ink/10 bg-white px-4 py-3">
       <div class="mb-2 flex items-center justify-between text-sm">

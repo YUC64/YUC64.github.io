@@ -42,13 +42,14 @@ const spicyOf = (name) => SPICY[stripSize(name)] ?? 0;
  * ------------------------------------------------------------------------ */
 const TEMPS = {
   '泰式奶茶': ['冰', '去冰', '熱'],
+  '檸檬茶': ['冰', '去冰'],
   '摩摩喳喳': ['冰', '去冰'],
   '椰香黑糯米': ['冷', '熱'],
 };
 const tempsOf = (name) => TEMPS[stripSize(name)] || [];
 
 /* 套餐的「飲料升級」選項（PDF：可加價升級酒類/特調飲品；價差依現場公告，訂單不加價） */
-const DRINK_UPGRADES = ['荔枝冰茶啵啵', '泰象啤酒', '臺虎嗨啤'];
+const DRINK_UPGRADES = [];   // 不加價升級（門市決定不提供）
 
 /** 5 個春節套餐。fixed = 隨套餐附贈的「套餐特選」；groups = 需選 N 的品項。 */
 const SETS = [
@@ -208,7 +209,7 @@ const ALC = [
   { id: 'a34', cat: 'dessert', name: '椰香黑糯米', desc: '黑糯米加上濃郁椰漿、亞達子更添Q彈口感。',       price: 100, img: IMG('blackrice'), unit: '冷／熱' },
 
   { id: 'a35', cat: 'drink',   name: '泰式奶茶', desc: '茶葉與奶香的完美比例，冰涼熟悉的味道讓人一秒飛到泰國。',         price: 120, img: IMG('thaitea'), unit: '冰／去冰／熱' },
-  { id: 'a36', cat: 'drink',   name: '檸檬茶', desc: '檸檬汁加上綠茶就是清爽解渴。',           price: 120, img: IMG('lemontea') },
+  { id: 'a36', cat: 'drink',   name: '檸檬茶', desc: '檸檬汁加上綠茶就是清爽解渴。',           price: 120, img: IMG('lemontea'), unit: '冰／去冰' },
   { id: 'a37', cat: 'drink',   name: '荔枝冰茶啵啵', desc: '荔枝果肉融入紅茶，甘甜順口，尾韻帶有淡淡斑蘭清香，搭配啵啵增添爽脆嚼感。',     price: 150, img: IMG('lycheetea') },
   { id: 'a38', cat: 'drink',   name: '泰象啤酒', desc: '帶有淡淡的麥芽香氣與微妙的果香，口感清爽順口。',         price: 150, img: IMG('changbeer'), alcohol: true },
   { id: 'a39', cat: 'drink',   name: '臺虎嗨啤', desc: '選用德國頂級 Weyermann 麥芽，將清新的草本花香與純淨的麥芽清甜完美融合。',         price: 130, img: IMG('craftbeer'), alcohol: true },
