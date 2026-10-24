@@ -455,8 +455,8 @@ function askMild(name, anchor) {
   pop.innerHTML = `<p>${esc(name)}</p><div class="row"><button data-mild-now="0" class="${on ? '' : 'on'}">正常</button><button data-mild-now="1" class="${on ? 'on' : ''}">不辣</button></div>`;
   document.body.appendChild(pop);
   const r = anchor && anchor.getBoundingClientRect ? anchor.getBoundingClientRect() : { left: window.innerWidth / 2 - 88, bottom: window.innerHeight / 2, width: 0 };
-  pop.style.top = `${Math.max(10, Math.min(r.bottom + 8, window.innerHeight - 110)) + window.scrollY}px`;
-  pop.style.left = `${Math.max(12, Math.min(r.left, window.innerWidth - 196)) + window.scrollX}px`;
+  pop.style.top = `${Math.max(10, Math.min(r.bottom + 8, window.innerHeight - 118))}px`;
+  pop.style.left = `${Math.max(12, Math.min(r.left, window.innerWidth - 196))}px`;
   pop.addEventListener('click', (e) => {
     const b = e.target.closest('[data-mild-now]');
     if (!b) return;
@@ -488,7 +488,9 @@ function setLineHTML(line) {
   const def = SETS.find((s) => s.id === line.setId);
   if (!def) return '';
   const groups = def.groups.map((g) => {
-    const picked = (line.picks[g.key] || []).map((p) => esc(p) + ((line.mild || {})[p] ? '<span class="text-[9.5px] tracking-[.1em] text-gold">（不辣）</span>' : '') + spicyHTML(p)).join('、') || '—';
+    const picked = (line.picks[g.key] || []).map((p) => (line.mild || {})[p]
+      ? esc(p) + '<span class="text-[9.5px] tracking-[.1em] text-gold">（不辣）</span>'
+      : esc(p) + spicyHTML(p)).join('、') || '—';
     return `<li><b>${esc(g.label)}：</b>${picked}</li>`;
   }).join('');
   const drinks = (Array.isArray(line.drinks) ? line.drinks : [])
