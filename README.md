@@ -1,5 +1,7 @@
 # 饗泰多 SIAM MORE｜除夕線上預點餐
 
+> **線上網址：https://yuc64.github.io/**
+
 純前端（HTML / Tailwind CSS CDN / Vanilla JS）的除夕年菜線上預訂網站，託管在 **GitHub Pages**，
 資料透過一支免費的 **Google Apps Script** 直接寫入 Google 試算表（不需要自架伺服器、不使用 Google 表單）。
 

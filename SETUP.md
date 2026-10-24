@@ -33,7 +33,7 @@
 開你的「訂位表」→ **擴充功能 → Apps Script** → 把
 [`scripts/google-apps-script/Code.gs`](scripts/google-apps-script/Code.gs) 整份貼進 `Code.gs`（蓋掉原本內容）→ 存檔。
 
-（線上直接複製：`https://raw.githubusercontent.com/Yuchen0614/eatthai-newyear-preorder/main/scripts/google-apps-script/Code.gs`）
+（線上直接複製：`https://raw.githubusercontent.com/YUC64/YUC64.github.io/main/scripts/google-apps-script/Code.gs`）
 
 ## 步驟 2：執行 setupAll
 
