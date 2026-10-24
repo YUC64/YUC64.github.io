@@ -48,7 +48,7 @@ window.CONFIG = {
   //   部署方式見 SETUP.md：Apps Script → 部署 → 網頁應用程式（執行身分：我／存取權：任何人）
   // ---------------------------------------------------------------------------
   api: {
-    endpoint: 'https://script.google.com/macros/s/AKfycbwCWybRxrMPmxKPMez3vXV0NbA4P5oDjs2m56aHMfXCExTUxM1-K6py2E3V5qYUOGLy/exec',
+    endpoint: 'https://script.google.com/macros/s/AKfycbxeMkqbE1T-oH4WwLv3RUHHjfTC1N9rMoXCjOhqQiL1kc9oc-glRvenSHrfJ-lT5-yucA/exec',
   },
 
   reservation: {
