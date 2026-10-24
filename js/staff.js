@@ -267,6 +267,8 @@
         $('#pwMsg').textContent = err.code === 'bad_password'
           ? '密碼不正確' + (err.remaining != null ? `（還可嘗試 ${err.remaining} 次）` : '')
           : err.code === 'locked' ? '嘗試次數過多，請 15 分鐘後再試'
+          : (err.code === 'bad_phone' || err.code === 'need_code')
+            ? '伺服器還是舊版：請在 Apps Script 貼上新版 Code.gs，重新部署後再試'
           : `無法連線：${err.message}`;
         $('#pwMsg').classList.remove('hidden');
       } finally {
