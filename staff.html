@@ -118,6 +118,10 @@
       <div class="ml-auto flex flex-1 items-center gap-2 sm:flex-none">
         <input id="search" type="search" placeholder="搜尋姓名／電話／訂單編號"
                class="field w-full sm:w-64" style="padding:.45rem 0;font-size:11.5px">
+        <select id="sortBy" class="field w-auto shrink-0 cursor-pointer" style="padding:.45rem 1.2rem .45rem 0;font-size:11.5px">
+          <option value="pickup">依取餐時間</option>
+          <option value="recent">最新送出</option>
+        </select>
         <label class="flex shrink-0 items-center gap-1.5 text-[10px] tracking-[.1em] text-ink-mute">
           <input id="autoRefresh" type="checkbox" checked class="h-3.5 w-3.5 accent-[#17140F]"> 自動
         </label>

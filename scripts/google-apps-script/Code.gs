@@ -26,6 +26,7 @@ const RESERVATION_TAB = '訂位名單';
 
 const ORDER_SHEET_NAME = '饗泰多 除夕預點餐 訂單';
 const ORDER_TAB = '訂單';
+const ARCHIVE_TAB = '已取消';   // 取消的訂單搬到這裡，主表保持乾淨
 /** 訂單要寫進哪一份試算表：填 ID 就固定用這一張（留空 = 由 setupAll 自動建立新檔） */
 const ORDER_SHEET_ID_FIXED = '1qaJy5BOywcLwlE4tPdWtdNnaVA1gV6G1a8qe4yrOtIk';
 
@@ -301,7 +302,76 @@ function doPost(e) {
   const newRow = sh.getLastRow() + 1;
   sh.getRange(newRow, 5).setNumberFormat('@');          // 電話欄先設文字
   sh.getRange(newRow, 1, 1, ORDER_HEADERS.length).setValues([values]);
-  return jsonOut({ ok: true, orderId: orderId, mode: 'created', row: newRow, status: status });
+
+  const tidyInfo = tidyOrderSheet_();
+  return jsonOut({ ok: true, orderId: orderId, mode: 'created', row: newRow, status: status,
+                   archived: tidyInfo.moved, active: tidyInfo.kept });
+}
+
+/**
+ * 整理訂單表：① 已取消的搬到「已取消」分頁 ② 剩下的依「取餐時間 → 送出時間」排序
+ * 每次寫入自動執行；也可以在編輯器手動執行 tidyNow()
+ */
+function tidyOrderSheet_() {
+  const ss = orderSheet_();
+  const sh = ss.getSheetByName(ORDER_TAB);
+  if (!sh) return { moved: 0, kept: 0 };
+  const last = sh.getLastRow();
+  if (last < 2) return { moved: 0, kept: 0 };
+
+  const width = ORDER_HEADERS.length;
+  const range = sh.getRange(2, 1, last - 1, width);
+  const rows = range.getValues();
+
+  const keep = [];
+  const moved = [];
+  for (let i = 0; i < rows.length; i++) {
+    const id = String(rows[i][0] || '').trim();
+    if (!id) continue;                                        // 空列直接丟掉
+    if (String(rows[i][1] || '').trim() === '已取消') moved.push(rows[i]);
+    else keep.push(rows[i]);
+  }
+
+  // ① 已取消 → 分頁
+  if (moved.length) {
+    let arc = ss.getSheetByName(ARCHIVE_TAB);
+    if (!arc) {
+      arc = ss.insertSheet(ARCHIVE_TAB);
+      arc.getRange(1, 1, 1, width).setValues([ORDER_HEADERS]);
+      arc.getRange(1, 1, 1, width).setFontWeight('bold').setBackground('#E8E1D4');
+      arc.setFrozenRows(1);
+      arc.setColumnWidth(1, 160).setColumnWidth(4, 100).setColumnWidth(5, 130);
+    }
+    const startRow = Math.max(arc.getLastRow() + 1, 2);
+    arc.getRange(startRow, 1, moved.length, width).setValues(moved);
+    arc.getRange(startRow, 5, moved.length, 1).setNumberFormat('@');
+  }
+
+  // ② 排序：取餐時間（字串 YYYY-MM-DD HH:mm 可直接比大小）→ 送出時間（越早越前面）
+  const timeOf = function (v) { return v instanceof Date ? v.getTime() : 0; };
+  keep.sort(function (a, b) {
+    const pa = String(a[5] || ''), pb = String(b[5] || '');
+    if (pa !== pb) return pa < pb ? -1 : 1;
+    return timeOf(a[14]) - timeOf(b[14]);
+  });
+
+  // ③ 寫回：先寫入排序後的資料，再清掉尾端多出來的舊列（比先清空安全）
+  if (keep.length) {
+    sh.getRange(2, 1, keep.length, width).setValues(keep);
+    sh.getRange(2, 5, keep.length, 1).setNumberFormat('@');
+  }
+  const oldCount = last - 1;
+  if (oldCount > keep.length) {
+    sh.getRange(2 + keep.length, 1, oldCount - keep.length, width).clearContent();
+  }
+  return { moved: moved.length, kept: keep.length };
+}
+
+/** 手動整理（在 Apps Script 編輯器選這個函式執行即可） */
+function tidyNow() {
+  const info = tidyOrderSheet_();
+  Logger.log('已取消搬到「' + ARCHIVE_TAB + '」：' + info.moved + ' 筆；主表保留 ' + info.kept + ' 筆（已依取餐時間排序）');
+  return info;
 }
 
 /** 員工用：列出某支電話的訂單（在 Apps Script 編輯器執行，或部署後用 GET 擴充） */
@@ -341,13 +411,23 @@ function staffOrders_(p) {
   }
   cache.remove('staffTry');
 
-  const sh = orderSheet_().getSheetByName(ORDER_TAB);
-  const last = sh.getLastRow();
-  if (last < 2) return jsonOut({ ok: true, count: 0, orders: [], updatedAt: new Date().toISOString() });
+  const ss = orderSheet_();
+  const sources = [];
+  [ORDER_TAB, ARCHIVE_TAB].forEach(function (name) {
+    const sh = ss.getSheetByName(name);
+    if (!sh) return;
+    const last = sh.getLastRow();
+    if (last < 2) return;
+    sources.push({
+      rows: sh.getRange(2, 1, last - 1, ORDER_HEADERS.length).getValues(),
+      disp: sh.getRange(2, 1, last - 1, ORDER_HEADERS.length).getDisplayValues(),
+    });
+  });
+  if (!sources.length) return jsonOut({ ok: true, count: 0, orders: [], updatedAt: new Date().toISOString() });
 
-  const rows = sh.getRange(2, 1, last - 1, ORDER_HEADERS.length).getValues();
-  const disp = sh.getRange(2, 1, last - 1, ORDER_HEADERS.length).getDisplayValues();
   const orders = [];
+  sources.forEach(function (src) {
+  const rows = src.rows, disp = src.disp;
   for (let i = 0; i < rows.length; i++) {
     const r = rows[i], d = disp[i];
     const orderId = String(r[0] || '').trim();
@@ -370,7 +450,12 @@ function staffOrders_(p) {
       updated: String(d[14] || '').trim(),
     });
   }
-  orders.reverse();   // 最新的排前面
+  });
+  // 主表已依取餐時間排序，這裡再排一次確保「已取消」分頁的資料也接得順
+  orders.sort(function (a, b) {
+    if (a.pickup !== b.pickup) return a.pickup < b.pickup ? -1 : 1;
+    return String(a.orderId) < String(b.orderId) ? -1 : 1;
+  });
   return jsonOut({ ok: true, count: orders.length, orders: orders, updatedAt: new Date().toISOString() });
 }
 

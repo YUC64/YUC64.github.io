@@ -12,11 +12,21 @@ from urllib.parse import urlparse, parse_qs
 PW = 'SIAMMORE2027'
 
 ORDERS = [
+    dict(orderId='XT2610241210345', status='已取消', action='取消', name='張志豪', phone='0955666777',
+         pickup='2027-02-06 18:00', headcount='2',
+         sets='【二人套餐】春節雙人饗宴', setsTotal=1760,
+         alacarte='', alacarteTotal=0, service=176, total=1936,
+         note='客人臨時取消', updated='2026/10/24 下午 12:31:02'),
     dict(orderId='XT2610241205865', status='新訂單', action='新增', name='王小明', phone='0912345678',
          pickup='2027-02-06 11:30', headcount='6',
          sets='【六人套餐】泰香炙烤牛小排 ｜ 冠軍月亮蝦餅 ｜ 蝦醬高麗菜 ｜ 冬蔭功湯',
          setsTotal=5280, alacarte='摩摩喳喳（冰）x2、泰式奶茶（熱）x6', alacarteTotal=780,
          service=606, total=6666, note='一位素食，請協助', updated='2026/10/24 下午 12:05:31'),
+    dict(orderId='XT2610241211776', status='新訂單', action='新增', name='黃雅婷', phone='0966777888',
+         pickup='2027-02-06 19:00', headcount='8',
+         sets='【八人套餐】泰式檸檬魚 ｜ 綠咖哩雞 ｜ 椒麻雞 ｜ 炒河粉 ｜ 酸辣湯',
+         setsTotal=6980, alacarte='', alacarteTotal=0,
+         service=698, total=7678, note='無', updated='2026/10/24 下午 12:40:19'),
     dict(orderId='XT2610241209130', status='已修改', action='修改', name='陳大文', phone='0987654321',
          pickup='2027-02-06 12:00', headcount='4',
          sets='【四人套餐】黃咖哩軟殼蟹 ｜ 檸香酸辣小卷 ｜ 炒什錦蔬菜 ｜ 香茅湯',
@@ -27,16 +37,6 @@ ORDERS = [
          sets='【十人套餐】泰香炙烤牛小排 x2 ｜ 月亮蝦餅 x2 ｜ 檸檬魚 ｜ 打拋豬 ｜ 綠咖哩雞',
          setsTotal=9880, alacarte='泰象啤酒 x10', alacarteTotal=1200,
          service=1108, total=12188, note='需兒童座椅 2 張', updated='2026/10/24 下午 12:20:45'),
-    dict(orderId='XT2610241210345', status='已取消', action='取消', name='張志豪', phone='0955666777',
-         pickup='2027-02-06 18:00', headcount='2',
-         sets='【二人套餐】春節雙人饗宴', setsTotal=1760,
-         alacarte='', alacarteTotal=0, service=176, total=1936,
-         note='客人臨時取消', updated='2026/10/24 下午 12:31:02'),
-    dict(orderId='XT2610241211776', status='新訂單', action='新增', name='黃雅婷', phone='0966777888',
-         pickup='2027-02-06 19:00', headcount='8',
-         sets='【八人套餐】泰式檸檬魚 ｜ 綠咖哩雞 ｜ 椒麻雞 ｜ 炒河粉 ｜ 酸辣湯',
-         setsTotal=6980, alacarte='', alacarteTotal=0,
-         service=698, total=7678, note='無', updated='2026/10/24 下午 12:40:19'),
 ]
 
 class H(BaseHTTPRequestHandler):

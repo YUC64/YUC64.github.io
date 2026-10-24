@@ -20,6 +20,7 @@
     orders: [],
     seen: new Set(),      // 上一次就存在的訂單（用來標記新進單）
     filter: 'active',     // active | 新訂單 | 已修改 | 已取消 | all
+    sort: 'pickup',       // pickup = 依取餐時間｜recent = 最新送出
     q: '',
     timer: null,
     loading: false,
@@ -128,15 +129,25 @@
       <button data-tab="${esc(t.key)}" class="tab ${S.filter === t.key ? 'on' : ''}">${esc(t.label)}</button>`).join('');
   }
 
+  function sortList(arr) {
+    const byId = (a, b) => String(a.orderId).localeCompare(String(b.orderId));
+    if (S.sort === 'recent') return arr.sort((a, b) => byId(b, a));   // 訂單編號含時間，新的排前面
+    return arr.sort((a, b) => {
+      const pa = a.pickup || '', pb = b.pickup || '';
+      if (pa !== pb) return pa < pb ? -1 : 1;                          // 取餐時間早的在前
+      return byId(a, b);
+    });
+  }
+
   function filtered() {
     const q = S.q.trim().toLowerCase();
-    return S.orders.filter((o) => {
+    return sortList(S.orders.filter((o) => {
       if (S.filter === 'active' && isCancelled(o)) return false;
       if (S.filter !== 'active' && S.filter !== 'all' && o.status !== S.filter) return false;
       if (!q) return true;
       return [o.orderId, o.name, o.phone, o.pickup, o.sets, o.alacarte, o.note]
         .join(' ').toLowerCase().includes(q);
-    });
+    }));
   }
 
   function rowHTML(o, isNew) {
@@ -282,6 +293,7 @@
     $('#btnPrint').addEventListener('click', () => window.print());
     $('#autoRefresh').addEventListener('change', startAuto);
     $('#search').addEventListener('input', (e) => { S.q = e.target.value; render(); });
+    $('#sortBy').addEventListener('change', (e) => { S.sort = e.target.value; render(); });
     $('#tabs').addEventListener('click', (e) => {
       const b = e.target.closest('[data-tab]');
       if (!b) return;
