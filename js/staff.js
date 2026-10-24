@@ -30,6 +30,7 @@
   const money = (n) => (n === '' || n == null || isNaN(Number(n))) ? '—' : '$' + Number(n).toLocaleString('zh-TW');
   const num = (n) => (n === '' || n == null || isNaN(Number(n))) ? 0 : Number(n);
   const isCancelled = (o) => o.status === '已取消';
+  const lines = (t) => String(t || '').split(String.fromCharCode(10)).map((l) => esc(l)).join('<br>');
   const badgeClass = (st) => st === '已取消' ? 'badge-cancel' : (st === '已修改' ? 'badge-edit' : 'badge-new');
 
   /* ───────────────────────── 密碼 ───────────────────────── */
@@ -177,8 +178,10 @@
       </div>
       <div class="detail hidden px-4 pb-4 pt-1">
         <dl class="grid gap-2 text-[11.5px] leading-relaxed sm:grid-cols-2">
-          <div><dt class="inline text-ink-mute">套餐：</dt><dd class="inline">${esc(o.sets) || '—'}</dd></div>
-          <div><dt class="inline text-ink-mute">單點：</dt><dd class="inline">${esc(o.alacarte) || '—'}</dd></div>
+          <div class="sm:col-span-2"><dt class="mb-1 text-ink-mute">套餐內容</dt>
+            <dd class="border-l-2 border-[rgba(23,20,15,.15)] pl-3 leading-[1.9]">${o.sets ? lines(o.sets) : '—'}</dd></div>
+          <div class="sm:col-span-2"><dt class="mb-1 text-ink-mute">單點內容</dt>
+            <dd class="border-l-2 border-[rgba(23,20,15,.15)] pl-3 leading-[1.9]">${o.alacarte ? lines(o.alacarte) : '—'}</dd></div>
           <div><dt class="inline text-ink-mute">套餐金額：</dt><dd class="inline mono">${money(o.setsTotal)}</dd></div>
           <div><dt class="inline text-ink-mute">單點金額：</dt><dd class="inline mono">${money(o.alacarteTotal)}</dd></div>
           <div><dt class="inline text-ink-mute">服務費：</dt><dd class="inline mono">${money(o.service)}</dd></div>

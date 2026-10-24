@@ -167,11 +167,20 @@ function renderSets() {
 }
 
 /* -------- 套餐選配彈窗 -------- */
+function draftComplete() {
+  if (!S.draft) return false;
+  const def = SETS.find((s) => s.id === S.draft.setId);
+  if (!def) return false;
+  const groupsOK = def.groups.every((g) => (S.draft.picks[g.key] || []).length === g.pick);
+  const drinksOK = (S.draft.drinks || []).every((d) => d.name);
+  return groupsOK && drinksOK;
+}
+
 function openSetConfig(setId, editLine = null) {
   const def = SETS.find((s) => s.id === setId);
   S.draft = editLine
     ? JSON.parse(JSON.stringify(editLine))
-    : { lineId: `L${Date.now().toString(36)}`, setId, qty: 1, picks: {}, drinks: [], upgrades: [] };
+    : { lineId: `L${Date.now().toString(36)}`, setId, qty: 1, picks: {}, drinks: [], upgrades: [], tried: false };
 
   def.groups.forEach((g) => { if (!S.draft.picks[g.key]) S.draft.picks[g.key] = []; });
   if (!S.draft.upgrades) S.draft.upgrades = [];
@@ -269,28 +278,32 @@ function syncDraftUI() {
   def.groups.forEach((g) => {
     const chosen = S.draft.picks[g.key] || [];
     const box = $(`[data-group="${g.key}"]`);
-    box.classList.toggle('bad', chosen.length !== g.pick);
+    // 只有「按過加入但沒選滿」才亮紅框，一開窗不亮
+    box.classList.toggle('bad', S.draft.tried === true && chosen.length !== g.pick);
     if (chosen.length !== g.pick) ok = false;
     const c = $(`[data-counter="${g.key}"]`);
     c.textContent = chosen.length === g.pick ? `已選 ${chosen.length}／${g.pick} ✓` : `還需 ${g.pick - chosen.length} 道`;
-    c.className = `text-[11px] font-bold ${chosen.length === g.pick ? 'text-thai-green' : 'text-thai-red'}`;
+    c.className = `text-[11px] font-bold ${chosen.length === g.pick ? 'text-thai-green'
+      : (S.draft.tried === true ? 'text-thai-red' : 'text-ink-mute')}`;
     $$(`[data-pick="${g.key}"]`).forEach((b) => b.classList.toggle('on', chosen.includes(b.dataset.value)));
   });
 
   const drinksOK = S.draft.drinks.every((d) => d.name);
   if (!drinksOK) ok = false;
+  const drinkBox = $('[data-group="drink"]');
+  if (drinkBox) drinkBox.classList.toggle('bad', S.draft.tried === true && !drinksOK);
   const dc = $('[data-counter="drink"]');
   dc.textContent = drinksOK ? `已選 ${S.draft.drinks.length}／${def.drinkPick} ✓` : `還需 ${def.drinkPick - S.draft.drinks.filter((d) => d.name).length} 杯`;
-  dc.className = `text-[11px] font-bold ${drinksOK ? 'text-thai-green' : 'text-thai-red'}`;
+  dc.className = `text-[11px] font-bold ${drinksOK ? 'text-thai-green'
+    : (S.draft.tried === true ? 'text-thai-red' : 'text-ink-mute')}`;
 
   $$('[data-upgrade]').forEach((b) => b.classList.toggle('on', S.draft.upgrades.includes(b.dataset.upgrade)));
 
   const btn = $('[data-add-set]');
-  const canAdd = ok && loggedIn();
-  btn.disabled = !ok;
+  btn.disabled = false;          // 可按：按了才知道哪幾項沒選到
   if (!ok) {
-    btn.className = 'btn btn-line is-disabled w-full text-[11.5px]';
-    btn.textContent = '請選滿內容';
+    btn.className = 'btn btn-line w-full text-[11.5px]';
+    btn.textContent = '加入訂單';
   } else if (!loggedIn()) {
     btn.className = 'btn btn-line w-full text-[11.5px]';
     btn.textContent = '登入後加入';
@@ -852,7 +865,7 @@ function openMyOrders() {
             <p class="font-black">${esc(o.orderId)}</p>
             <span class="rounded-full px-2 py-0.5 text-[11px] font-black ${statusColor[o.status] || ''}">${esc(o.status)}</span>
           </div>
-          <p class="mt-1 text-[12px] text-ink-mute">取餐時間：${esc(o.pickup)}・${o.headcount} 人・總計 ${fmt(o.total)}</p>
+          <p class="mt-1 text-[12px] text-ink-mute">${o.headcount} 人・總計 ${fmt(o.total)}</p>
           <p class="mt-1 line-clamp-2 text-[11px] leading-relaxed text-ink-soft">${esc(o.summary)}</p>
           <div class="mt-2 flex gap-2">
             <button data-edit-order="${esc(o.orderId)}" ${o.status === '取消訂單' ? 'disabled' : ''}
@@ -893,7 +906,6 @@ function openCheckout() {
   if (!calc().count) return toast('訂單是空的');
 
   const c = calc();
-  const { min, max, slots } = { min: CFG.orders.openFrom, max: CFG.orders.openTo, slots: CFG.orders.timeSlots };
 
   openModal(`
     <div class="flex items-start justify-between border-b border-[rgba(23,20,15,.1)] px-6 py-5">
@@ -917,17 +929,6 @@ function openCheckout() {
           <span class="field-label">電話</span>
           <input name="phone" required inputmode="numeric" maxlength="10" value="${esc(S.user.phone)}"
                  class="field">
-        </label>
-        <label class="block">
-          <span class="field-label">預計取餐日</span>
-          <input name="date" type="date" required min="${min}" max="${max}" value="${min}"
-                 class="field">
-        </label>
-        <label class="block">
-          <span class="field-label">預計取餐時間</span>
-          <select name="time" required class="field">
-            ${slots.map((t) => `<option value="${t}">${t}</option>`).join('')}
-          </select>
         </label>
       </div>
       <label class="block">
@@ -960,10 +961,18 @@ function openCheckout() {
 function buildSummary() {
   const setLines = S.cart.sets.map((line) => {
     const def = SETS.find((s) => s.id === line.setId);
-    const picks = def.groups.map((g) => `${g.label}:${(line.picks[g.key] || []).join('/')}`).join(' ');
-    const drinks = (line.drinks || []).map((d) => `${d.name}${d.temp ? `(${d.temp})` : ''}`).join('/');
-    const ups = (line.upgrades || []).length ? ` 升級:${line.upgrades.join('/')}` : '';
-    return `${def.name} x${line.qty} [${picks} | 特選:${def.fixed.join('/')} | 飲料:${drinks}${ups}]`;
+    const rows = [`${def.name} ×${line.qty}`];
+    // 每個選項類別各一行，門市一眼看出客人選了什麼
+    def.groups.forEach((g) => {
+      const chosen = (line.picks[g.key] || []).filter(Boolean);
+      rows.push(`　${g.label}：${chosen.length ? chosen.join('、') : '—'}`);
+    });
+    const drinks = (line.drinks || []).filter((d) => d.name)
+      .map((d) => `${d.name}${d.temp ? `（${d.temp}）` : ''}`);
+    rows.push(`　飲料：${drinks.length ? drinks.join('、') : '—'}`);
+    rows.push(`　內含：${def.fixed.join('、')}`);
+    if ((line.upgrades || []).length) rows.push(`　升級：${line.upgrades.join('、')}`);
+    return rows.join('\n');
   });
   const alcLines = S.cart.alc.map((line) => {
     const item = ALC.find((a) => a.id === line.id);
@@ -985,13 +994,10 @@ async function submitOrder(ev) {
   const btn = $('#btnSubmit');
   const name = f.name.value.trim();
   const phone = f.phone.value.replace(/\D/g, '');
-  const date = f.date.value;
-  const time = f.time.value;
   const note = f.note.value.trim();
 
   if (!name) return toast('請填寫姓名');
   if (!/^09\d{8}$/.test(phone)) return toast('電話格式錯誤（09 開頭共 10 碼）');
-  if (!date || !time) return toast('請選擇預計取餐時間');
   if (alcLocked()) return toast('請先選擇春節套餐');
   if (!calc().count) return toast('訂單是空的');
 
@@ -1008,7 +1014,7 @@ async function submitOrder(ev) {
     action: act,
     name,
     phone,
-    pickup: `${date} ${time}`,
+    pickup: '',
     headcount: `${c.headcount} 人`,
     sets: setLines.join(' ｜ ') || '無',
     setsTotal: String(c.setsSubtotal),
@@ -1030,7 +1036,7 @@ async function submitOrder(ev) {
       writeInfo = await postOrderToApi({
         action: S.editing ? '修改' : '新增',
         orderId, name, phone, code: S.user.code || '',
-        pickup: values.pickup, headcount: c.headcount,
+        headcount: c.headcount,
         sets: setLines.join(' ｜ '), setsTotal: c.setsSubtotal,
         alacarte: alcLines.join('、'), alacarteTotal: c.alcSubtotal,
         service: c.service, total: c.total, note: values.note, ts: values.ts,
@@ -1048,7 +1054,7 @@ async function submitOrder(ev) {
   }
 
   const record = {
-    orderId, phone, name, pickup: values.pickup, headcount: c.headcount, total: c.total,
+    orderId, phone, name, pickup: '', headcount: c.headcount, total: c.total,
     status: act, ts: Date.now(), note,
     code: S.user.code || '',
     summary: [...setLines, ...alcLines].join(' ｜ '),
@@ -1098,7 +1104,6 @@ function showSuccess(record, delivered) {
         <p class="text-[11px] font-black text-ink-mute">訂單編號</p>
         <p class="text-2xl font-black tracking-wider">${esc(record.orderId)}</p>
         <div class="mt-3 space-y-0.5 text-ink-soft">
-          <p>取餐時間：<b>${esc(record.pickup)}</b></p>
           <p>用餐人數：<b>${record.headcount} 人</b></p>
           <p>總計：<b>${fmt(record.total)}</b>（含服務費）</p>
         </div>
@@ -1224,6 +1229,12 @@ function bindEvents() {
       return syncDraftUI();
     }
     if (d.addSet !== undefined) {
+      if (!draftComplete()) {
+        S.draft.tried = true;
+        syncDraftUI();
+        const missing = $$('.group-box.bad').length;
+        return toast(`還有 ${missing} 項沒選滿，已用紅框標出`);
+      }
       if (!loggedIn()) return needLogin('請先登入才能把套餐加入訂單');
       const existing = S.cart.sets.findIndex((l) => l.lineId === S.draft.lineId);
       if (existing >= 0) S.cart.sets[existing] = S.draft; else S.cart.sets.push(S.draft);

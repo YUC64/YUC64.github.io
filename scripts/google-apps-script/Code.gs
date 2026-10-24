@@ -184,6 +184,8 @@ function setupOrderSheet(report) {
   sh.setFrozenRows(1);
   sh.getRange('A2:A').setNumberFormat('@');   // 訂單編號當文字
   sh.getRange('F2:F').setNumberFormat('@');   // 取餐時間當文字（避免被轉成日期）
+  sh.getRange('H2:H').setWrap(true);          // 套餐內容換行顯示
+  sh.getRange('J2:J').setWrap(true);          // 單點內容換行顯示
   sh.getRange('E2:E').setNumberFormat('@');   // 電話當文字（保留前導 0）
   sh.setColumnWidth(1, 160).setColumnWidth(4, 100).setColumnWidth(5, 130);
   return ss.getUrl();
@@ -357,9 +359,12 @@ function tidyOrderSheet_() {
   const timeOf = function (v) { return v instanceof Date ? v.getTime() : 0; };
   keep.concat(moved).forEach(function (r) { r[5] = pickupStr_(r[5]); });
   keep.sort(function (a, b) {
-    const pa = String(a[5] || ''), pb = String(b[5] || '');
-    if (pa !== pb) return pa < pb ? -1 : 1;
-    return timeOf(a[14]) - timeOf(b[14]);
+    // 有填取餐時間的排前面（由早到晚）；都沒填就依下單順序（訂單編號含時間）
+    const pa = String(a[5] || '').trim(), pb = String(b[5] || '').trim();
+    if (pa && pb) { if (pa !== pb) return pa < pb ? -1 : 1; }
+    else if (pa || pb) return pa ? -1 : 1;
+    const ia = String(a[0] || ''), ib = String(b[0] || '');
+    return ia < ib ? -1 : (ia > ib ? 1 : 0);
   });
 
   // ③ 寫回：先寫入排序後的資料，再清掉尾端多出來的舊列（比先清空安全）
@@ -367,6 +372,8 @@ function tidyOrderSheet_() {
     sh.getRange(2, 1, keep.length, width).setValues(keep);
     sh.getRange(2, 5, keep.length, 1).setNumberFormat('@');
     sh.getRange(2, 6, keep.length, 1).setNumberFormat('@');
+    sh.getRange(2, 8, keep.length, 1).setWrap(true);      // 套餐內容：多行好讀
+    sh.getRange(2, 10, keep.length, 1).setWrap(true);     // 單點內容
   }
   const oldCount = last - 1;
   if (oldCount > keep.length) {

@@ -92,6 +92,9 @@ class Range {
   setFontWeight() { return this; }
   setBackground() { return this; }
   setFormula() { return this; }
+  setWrap() { return this; }
+  setVerticalAlignment() { return this; }
+  setHorizontalAlignment() { return this; }
   clearContent() {
     for (let i = 0; i < this.nr; i++) {
       for (let j = 0; j < this.nc; j++) {
