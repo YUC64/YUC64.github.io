@@ -83,6 +83,12 @@
       }
       const box = $('#errBox');
       box.classList.remove('hidden');
+      if (err.code === 'bad_phone' || err.code === 'need_code') {
+        // 舊版 Apps Script 還沒有員工 API，會走到顧客驗證分支
+        box.innerHTML = `伺服器還是舊版：請到 Apps Script 貼上新版 <b>Code.gs</b>，然後
+          「部署 → 管理部署作業 → 編輯 → 版本：新版本 → 部署」。`;
+        return;
+      }
       box.innerHTML = `讀取失敗：<b>${esc(err.message)}</b><br>
         請確認：① Apps Script 已貼上新版並「重新部署」 ② 網路正常 ③ 網址是 /exec 結尾。`;
     } finally {
