@@ -321,6 +321,20 @@ function syncDraftUI() {
   dc.className = `text-[11px] font-bold ${drinksOK ? 'text-thai-green'
     : (S.draft.tried === true ? 'text-thai-red' : 'text-ink-mute')}`;
 
+  // 選了不辣：菜名按鈕上的辣椒拿掉，改成（不辣）
+  $$('#modalBox [data-pick]').forEach((b) => {
+    const nm = b.dataset.value;
+    const on = (S.draft.picks[b.dataset.pick] || []).indexOf(nm) >= 0;
+    const mild = on && !!((S.draft.mild || {})[nm]);
+    const tag = b.querySelector('[data-mildtag]');
+    if (mild && !tag) {
+      b.insertAdjacentHTML('beforeend', '<span data-mildtag class="ml-1 text-[9.5px] tracking-[.08em] text-gold">（不辣）</span>');
+    } else if (!mild && tag) {
+      tag.remove();
+    }
+    b.querySelectorAll('svg').forEach((svg) => { svg.style.display = mild ? 'none' : ''; });
+  });
+
   $$('[data-upgrade]').forEach((b) => b.classList.toggle('on', S.draft.upgrades.includes(b.dataset.upgrade)));
 
   const btn = $('[data-add-set]');
