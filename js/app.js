@@ -829,7 +829,7 @@ function renderMember() {
       <p>・不含線上結帳，款項請於現場結清</p>
       ${CFG.brand.phone ? `<p class="mt-2 font-bold text-ink-soft">訂購專線 ${esc(CFG.brand.phone)}</p>` : ''}
     </div>
-`;
+    <p class="mt-7 text-center"><a href="staff.html" class="text-[9.5px] tracking-[.24em] text-ink-mute/60 transition hover:text-ink-mute">員工專用</a></p>`;
 }
 
 /* ================================================================ 我的訂單 */

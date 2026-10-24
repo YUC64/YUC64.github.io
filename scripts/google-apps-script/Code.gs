@@ -28,6 +28,10 @@ const ORDER_SHEET_NAME = '饗泰多 除夕預點餐 訂單';
 const ORDER_TAB = '訂單';
 /** 訂單要寫進哪一份試算表：填 ID 就固定用這一張（留空 = 由 setupAll 自動建立新檔） */
 const ORDER_SHEET_ID_FIXED = '1qaJy5BOywcLwlE4tPdWtdNnaVA1gV6G1a8qe4yrOtIk';
+
+/** 員工看板密碼：改這一行後「重新部署」即生效（請換成自己的密碼） */
+const STAFF_PASSWORD = 'SIAMMORE2027';
+const STAFF_MAX_TRY = 20;        // 15 分鐘內錯超過這次數就暫時鎖住
 const ORDER_HEADERS = [
   '訂單編號', '狀態', '動作', '姓名', '電話', '預計取餐時間', '用餐人數',
   '套餐內容', '套餐金額', '單點內容', '單點金額', '服務費', '總金額', '備註', '最後更新',
@@ -188,6 +192,10 @@ function setupOrderSheet(report) {
 /** GET ?phone=09xxxxxxxx&code=1234 → 驗證登入；只回傳 {ok, name}，名單不外流 */
 function doGet(e) {
   const p = (e && e.parameter) || {};
+
+  // 員工看板：?staff=1&pw=密碼 → 回傳訂單清單（需密碼，因為含客人姓名電話）
+  if (p.staff) return staffOrders_(p);
+
   const phone = normPhone(p.phone);
   const code = String(p.code || '').trim();
   if (!/^09\d{8}$/.test(phone)) return jsonOut({ ok: false, error: 'bad_phone' });
@@ -316,6 +324,54 @@ function orderSheet_() {
   const id = ORDER_SHEET_ID_FIXED || PropertiesService.getScriptProperties().getProperty('ORDER_SHEET_ID');
   if (!id) throw new Error('尚未建立訂單表，請先執行 setupAll()');
   return SpreadsheetApp.openById(id);
+}
+
+/**
+ * 員工看板：GET ?staff=1&pw=密碼 → { ok, count, orders:[…], updatedAt }
+ * 只回傳「最近的狀態」（同一訂單編號在表上只有一列）
+ */
+function staffOrders_(p) {
+  const cache = CacheService.getScriptCache();
+  if (cache.get('staffLock')) return jsonOut({ ok: false, error: 'locked' });
+  if (String(p.pw || '') !== STAFF_PASSWORD) {
+    const n = Number(cache.get('staffTry') || 0) + 1;
+    cache.put('staffTry', String(n), 900);
+    if (n >= STAFF_MAX_TRY) cache.put('staffLock', '1', 900);
+    return jsonOut({ ok: false, error: 'bad_password', remaining: Math.max(0, STAFF_MAX_TRY - n) });
+  }
+  cache.remove('staffTry');
+
+  const sh = orderSheet_().getSheetByName(ORDER_TAB);
+  const last = sh.getLastRow();
+  if (last < 2) return jsonOut({ ok: true, count: 0, orders: [], updatedAt: new Date().toISOString() });
+
+  const rows = sh.getRange(2, 1, last - 1, ORDER_HEADERS.length).getValues();
+  const disp = sh.getRange(2, 1, last - 1, ORDER_HEADERS.length).getDisplayValues();
+  const orders = [];
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i], d = disp[i];
+    const orderId = String(r[0] || '').trim();
+    if (!orderId) continue;
+    orders.push({
+      orderId: orderId,
+      status: String(r[1] || '').trim(),
+      action: String(r[2] || '').trim(),
+      name: String(r[3] || '').trim(),
+      phone: normPhone(r[4]),
+      pickup: String(r[5] || '').trim(),
+      headcount: String(r[6] || '').trim(),
+      sets: String(r[7] || '').trim(),
+      setsTotal: num_(r[8]),
+      alacarte: String(r[9] || '').trim(),
+      alacarteTotal: num_(r[10]),
+      service: num_(r[11]),
+      total: num_(r[12]),
+      note: String(r[13] || '').trim(),
+      updated: String(d[14] || '').trim(),
+    });
+  }
+  orders.reverse();   // 最新的排前面
+  return jsonOut({ ok: true, count: orders.length, orders: orders, updatedAt: new Date().toISOString() });
 }
 
 /** 依電話找訂位列，回傳 {row, name, code, phone} */
