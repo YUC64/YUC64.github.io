@@ -30,7 +30,7 @@ const LS = {
 const load = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
 const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* 私密模式 */ } };
 
-const { SETS, ALC, CATEGORIES, DRINK_OPTIONS, DRINK_UPGRADES, spicyOf, tempsOf } = window.MENU;
+const { SETS, ALC, CATEGORIES, DRINK_OPTIONS, DRINK_UPGRADES, spicyOf, tempsOf, canNoSpicy } = window.MENU;
 const CFG = window.CONFIG;
 
 /** 統一產生「來電門市 xxx」的字串；沒設門市電話時不要留一個空白的電話 */
@@ -202,10 +202,11 @@ function openSetConfig(setId, editLine = null) {
   const def = SETS.find((s) => s.id === setId);
   S.draft = editLine
     ? JSON.parse(JSON.stringify(editLine))
-    : { lineId: `L${Date.now().toString(36)}`, setId, qty: 1, picks: {}, drinks: [], upgrades: [], tried: false };
+    : { lineId: `L${Date.now().toString(36)}`, setId, qty: 1, picks: {}, drinks: [], upgrades: [], mild: {}, tried: false };
 
   def.groups.forEach((g) => { if (!S.draft.picks[g.key]) S.draft.picks[g.key] = []; });
   if (!S.draft.upgrades) S.draft.upgrades = [];
+  if (!S.draft.mild) S.draft.mild = {};
 
   // 飲料：以「杯」為單位，預設第一種飲料 + 第一個冰熱選項，可逐杯調整
   if (!Array.isArray(S.draft.drinks) || S.draft.drinks.length !== def.drinkPick) {
@@ -235,6 +236,7 @@ function openSetConfig(setId, editLine = null) {
             ${g.options.map((o) => `<button class="chip" data-pick="${g.key}" data-value="${esc(o)}">${esc(o)}${spicyHTML(o)}</button>`).join('')}
           </div>
         </div>`).join('')}
+      <div id="mildBox"></div>
       <div class="group-box" data-group="drink">
         <div class="group-head">
           <p class="text-sm font-black">飲料 <span class="text-ink-mute">／選 ${def.drinkPick} 杯</span></p>
@@ -319,6 +321,18 @@ function syncDraftUI() {
   dc.className = `text-[11px] font-bold ${drinksOK ? 'text-thai-green'
     : (S.draft.tried === true ? 'text-thai-red' : 'text-ink-mute')}`;
 
+  // 辣度調整：已選且可改不辣的菜
+  const mildSel = [];
+  def.groups.forEach((g) => (S.draft.picks[g.key] || []).forEach((nm) => { if (canNoSpicy(nm)) mildSel.push(nm); }));
+  const mildBox = $('#mildBox');
+  if (mildBox) {
+    mildBox.innerHTML = mildSel.length ? `<div class="group-box">
+      <div class="group-head"><p class="text-sm font-black">辣度 <span class="text-ink-mute">／可選不辣</span></p></div>
+      <div class="mt-2 flex flex-wrap gap-1.5">
+        ${mildSel.map((nm) => `<button class="chip ${S.draft.mild[nm] ? 'on' : ''}" data-mildpick="${esc(nm)}">${esc(nm)} 不辣</button>`).join('')}
+      </div></div>` : '';
+  }
+
   $$('[data-upgrade]').forEach((b) => b.classList.toggle('on', S.draft.upgrades.includes(b.dataset.upgrade)));
 
   const btn = $('[data-add-set]');
@@ -353,7 +367,7 @@ function renderTabs() {
   }).join('');
 }
 
-const alcKey = (line) => (line.temp ? `${line.id}@${line.temp}` : line.id);
+const alcKey = (line) => `${line.id}@${line.temp || ''}${line.spicy ? '#' + line.spicy : ''}`;
 
 function alcCardHTML(item) {
   const inCart = S.cart.alc.filter((l) => l.id === item.id).reduce((n, l) => n + l.qty, 0);
@@ -398,7 +412,8 @@ function renderAlc() {
 function openTempPicker(itemId) {
   const item = ALC.find((a) => a.id === itemId);
   const temps = tempsOf(item.name);
-  if (!temps.length) return addAlcLine(itemId, '');
+  const mildAble = canNoSpicy(item.name);
+  if (!temps.length && !mildAble) return addAlcLine(itemId, '');
   openModal(`
     <div class="flex items-start justify-between border-b border-[rgba(23,20,15,.1)] px-6 py-5">
       <div>
@@ -414,33 +429,43 @@ function openTempPicker(itemId) {
       <div class="flex flex-wrap gap-2" id="tempChips">
         ${temps.map((t, i) => `<button class="chip ${i === 0 ? 'on' : ''}" data-temp="${esc(t)}">${esc(t)}</button>`).join('')}
       </div>
+      ${mildAble ? `<p class="mt-4 text-[10px] tracking-[.22em] text-gold">辣度</p>
+      <div class="mt-1.5 flex flex-wrap gap-2" id="mildChips">
+        <button class="chip on" data-mild="0">正常</button>
+        <button class="chip" data-mild="1">不辣</button>
+      </div>` : ''}
       <button id="btnTempAdd" class="btn btn-solid mt-6 w-full text-[11.5px]">
         加入訂單
       </button>
     </div>`, {
     onMount: (root) => {
-      let chosen = temps[0];
+      let chosen = temps[0] || '';
+      let mild = false;
       $$('[data-temp]', root).forEach((b) => b.addEventListener('click', () => {
         chosen = b.dataset.temp;
         $$('[data-temp]', root).forEach((x) => x.classList.toggle('on', x === b));
+      }));
+      $$('[data-mild]', root).forEach((b) => b.addEventListener('click', () => {
+        mild = b.dataset.mild === '1';
+        $$('[data-mild]', root).forEach((x) => x.classList.toggle('on', x === b));
       }));
       $('#btnTempAdd', root).addEventListener('click', () => {
         closeModal();
         if (needLogin()) return;
         if (hasOrder()) return toast('您已送出訂單，如需更改請聯繫門市開通修改', 3600);
-        addAlcLine(itemId, chosen);
+        addAlcLine(itemId, chosen, mild ? '不辣' : '');
       });
     },
   });
 }
 
-function addAlcLine(itemId, temp) {
+function addAlcLine(itemId, temp, spicy) {
   const item = ALC.find((a) => a.id === itemId);
-  const line = S.cart.alc.find((l) => l.id === itemId && (l.temp || '') === (temp || ''));
-  if (line) line.qty += 1; else S.cart.alc.push({ id: itemId, temp: temp || '', qty: 1 });
+  const line = S.cart.alc.find((l) => l.id === itemId && (l.temp || '') === (temp || '') && (l.spicy || '') === (spicy || ''));
+  if (line) line.qty += 1; else S.cart.alc.push({ id: itemId, temp: temp || '', qty: 1, spicy: spicy || '' });
   persistCart();
   renderAll();
-  toast(`${item.name}${temp ? `（${temp}）` : ''} 已加入訂單`);
+  toast(`${item.name}${temp ? `（${temp}）` : ''}${spicy ? `（${spicy}）` : ''} 已加入訂單`);
 }
 
 /* ================================================================ 訂單內容 */
@@ -448,7 +473,7 @@ function setLineHTML(line) {
   const def = SETS.find((s) => s.id === line.setId);
   if (!def) return '';
   const groups = def.groups.map((g) => {
-    const picked = (line.picks[g.key] || []).map((p) => esc(p) + spicyHTML(p)).join('、') || '—';
+    const picked = (line.picks[g.key] || []).map((p) => esc(p) + ((line.mild || {})[p] ? '<span class="text-[9.5px] tracking-[.1em] text-gold">（不辣）</span>' : '') + spicyHTML(p)).join('、') || '—';
     return `<li><b>${esc(g.label)}：</b>${picked}</li>`;
   }).join('');
   const drinks = (Array.isArray(line.drinks) ? line.drinks : [])
@@ -489,7 +514,7 @@ function alcLineHTML(line) {
     <div class="w-16 shrink-0">${imgBlock(item.img, item.name, '🍜')}</div>
     <div class="min-w-0 flex-1">
       <p class="truncate text-sm font-black">${esc(item.name)} ${spicyHTML(item.name)}</p>
-      <p class="mt-0.5 text-[11px] text-ink-mute">${fmt(item.price)}／份 ${line.temp ? tempChip(line.temp) : ''}</p>
+      <p class="mt-0.5 text-[11px] text-ink-mute">${fmt(item.price)}／份 ${line.temp ? tempChip(line.temp) : ''}${line.spicy ? tempChip(line.spicy) : ''}</p>
       <div class="mt-1.5 flex items-center gap-2">
         <button class="qty-btn" data-qty-alc="${esc(key)}" data-delta="-1">−</button>
         <span class="w-6 text-center text-sm font-black">${line.qty}</span>
@@ -1064,7 +1089,7 @@ function buildSummary() {
     // 每個選項類別各一行，門市一眼看出客人選了什麼
     def.groups.forEach((g) => {
       const chosen = (line.picks[g.key] || []).filter(Boolean);
-      rows.push(`　${g.label}：${chosen.length ? chosen.join('、') : '—'}`);
+      rows.push(`　${g.label}：${chosen.length ? chosen.map((nm) => (line.mild && line.mild[nm] ? nm + '（不辣）' : nm)).join('、') : '—'}`);
     });
     const drinks = (line.drinks || []).filter((d) => d.name)
       .map((d) => `${d.name}${d.temp ? `（${d.temp}）` : ''}`);
@@ -1075,7 +1100,7 @@ function buildSummary() {
   });
   const alcLines = S.cart.alc.map((line) => {
     const item = ALC.find((a) => a.id === line.id);
-    return `${item.name}${line.temp ? `(${line.temp})` : ''} x${line.qty}`;
+    return `${item.name}${line.temp ? `(${line.temp})` : ''}${line.spicy ? `(${line.spicy})` : ''} x${line.qty}`;
   });
   return { setLines, alcLines };
 }
@@ -1265,7 +1290,7 @@ async function cancelOrder(orderId) {
 /* ================================================================ 事件綁定 */
 function bindEvents() {
   document.addEventListener('click', (e) => {
-    const t = e.target.closest('[data-config-set],[data-pick],[data-upgrade],[data-add-set],[data-close-modal],[data-close-cart],[data-add-alc],[data-qty-alc],[data-del-alc],[data-qty-set],[data-del-set],[data-cat],[data-edit-order],[data-cancel-order],[data-menu-action],[data-drawer-close]');
+    const t = e.target.closest('[data-config-set],[data-pick],[data-mildpick],[data-upgrade],[data-add-set],[data-close-modal],[data-close-cart],[data-add-alc],[data-qty-alc],[data-del-alc],[data-qty-set],[data-del-set],[data-cat],[data-edit-order],[data-cancel-order],[data-menu-action],[data-drawer-close]');
     if (!t) return;
     const d = t.dataset;
 
@@ -1291,6 +1316,10 @@ function bindEvents() {
       if (i >= 0) arr.splice(i, 1);
       else if (arr.length < g.pick) arr.push(d.value);
       else { arr.shift(); arr.push(d.value); toast(`「${g.label}」最多選 ${g.pick} 道，已自動替換`); }
+      return syncDraftUI();
+    }
+    if (d.mildpick !== undefined) {
+      S.draft.mild[d.mildpick] = !S.draft.mild[d.mildpick];
       return syncDraftUI();
     }
     if (d.upgrade !== undefined) {
@@ -1319,12 +1348,13 @@ function bindEvents() {
       if (hasOrder()) return toast('您已送出訂單，如需更改請聯繫門市開通修改', 3600);
       if (alcLocked()) return toast('請先選擇一份春節套餐才能加點單點');
       const item = ALC.find((a) => a.id === d.addAlc);
-      if (tempsOf(item.name).length) return openTempPicker(d.addAlc);
+      if (tempsOf(item.name).length || canNoSpicy(item.name)) return openTempPicker(d.addAlc);
       return addAlcLine(d.addAlc, '');
     }
     if (d.qtyAlc !== undefined) {
-      const [id, temp = ''] = d.qtyAlc.split('@');
-      const line = S.cart.alc.find((l) => l.id === id && (l.temp || '') === temp);
+      const [idTemp, spicy = ''] = d.qtyAlc.split('#');
+      const [id, temp = ''] = idTemp.split('@');
+      const line = S.cart.alc.find((l) => l.id === id && (l.temp || '') === temp && (l.spicy || '') === spicy);
       if (!line) return;
       line.qty += Number(d.delta);
       if (line.qty <= 0) S.cart.alc = S.cart.alc.filter((l) => l !== line);
@@ -1333,8 +1363,9 @@ function bindEvents() {
       return;
     }
     if (d.delAlc !== undefined) {
-      const [id, temp = ''] = d.delAlc.split('@');
-      S.cart.alc = S.cart.alc.filter((l) => !(l.id === id && (l.temp || '') === temp));
+      const [idTemp2, spicy2 = ''] = d.delAlc.split('#');
+      const [id, temp = ''] = idTemp2.split('@');
+      S.cart.alc = S.cart.alc.filter((l) => !(l.id === id && (l.temp || '') === temp && (l.spicy || '') === spicy2));
       persistCart(); renderAll(); return toast('已移除');
     }
     if (d.qtySet !== undefined) {

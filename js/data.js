@@ -51,6 +51,10 @@ const tempsOf = (name) => TEMPS[stripSize(name)] || [];
 /* 套餐的「飲料升級」選項（PDF：可加價升級酒類/特調飲品；價差依現場公告，訂單不加價） */
 const DRINK_UPGRADES = [];   // 不加價升級（門市決定不提供）
 
+/* 可改「不辣」的 7 道菜（關鍵字比對，涵蓋咔／卡滋等寫法） */
+const NO_SPICY_KEYS = ['檸檬魚', '扁鱈', '打拋豬', '瀑布牛', '青木瓜', '椒麻雞', '軟殼蟹'];
+const canNoSpicy = (name) => NO_SPICY_KEYS.some((k) => String(name || '').indexOf(k) >= 0);
+
 /** 5 個春節套餐。fixed = 隨套餐附贈的「套餐特選」；groups = 需選 N 的品項。 */
 const SETS = [
   {
@@ -223,4 +227,4 @@ const ALC = [
 const DRINK_OPTIONS = ['泰式奶茶', '檸檬茶'];
 
 /* 供 app.js 使用 */
-window.MENU = { SETS, ALC, CATEGORIES, DRINK_OPTIONS, DRINK_UPGRADES, SPICY, TEMPS, spicyOf, tempsOf, stripSize };
+window.MENU = { SETS, ALC, CATEGORIES, DRINK_OPTIONS, DRINK_UPGRADES, SPICY, TEMPS, NO_SPICY_KEYS, canNoSpicy, spicyOf, tempsOf, stripSize };
