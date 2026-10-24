@@ -78,6 +78,9 @@ async function refreshMyOrderState(autoOpen) {
       S.hasOrder = data.orders.some((o) => o.status !== '已取消');
     }
   } catch (e) { /* 連線異常就沿用本機判斷 */ }
+  // 右上按鈕文字：已送出 → 我的訂單
+  const lbl = document.querySelector('#btnCartTop [data-top-label]');
+  if (lbl) lbl.textContent = S.hasOrder ? '我的訂單' : '訂單';
   if (S.hasOrder && autoOpen) openMyOrders();
 }
 
