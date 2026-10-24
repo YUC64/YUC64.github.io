@@ -62,6 +62,25 @@ const hasSet = () => S.cart.sets.length > 0;
 const alcLocked = () => CFG.rules.requireSetBeforeAlcarte && !hasSet();
 const loggedIn = () => !!S.user;
 
+/* 是否已經送出過訂單（送出後只能檢視，要門市開放才能改） */
+const hasOrder = () => S.hasOrder === true;
+function localHasOrder() {
+  if (!S.user) return false;
+  return S.orders.some((o) => o.phone === S.user.phone && o.status !== '取消訂單');
+}
+async function refreshMyOrderState(autoOpen) {
+  if (!S.user) { S.hasOrder = false; return; }
+  S.hasOrder = localHasOrder();            // 先用本機資料判斷，避免空窗
+  try {
+    const data = await fetchMine();
+    if (data && Array.isArray(data.orders)) {
+      S.myOrders = data.orders;
+      S.hasOrder = data.orders.some((o) => o.status !== '已取消');
+    }
+  } catch (e) { /* 連線異常就沿用本機判斷 */ }
+  if (S.hasOrder && autoOpen) openMyOrders();
+}
+
 /** 需要登入的動作：未登入就提示並開啟登入視窗，回傳 true 表示已攔下 */
 function needLogin(msg = '請先登入才能選購餐點') {
   if (loggedIn()) return false;
@@ -398,6 +417,7 @@ function openTempPicker(itemId) {
       $('#btnTempAdd', root).addEventListener('click', () => {
         closeModal();
         if (needLogin()) return;
+        if (hasOrder()) return toast('您已送出訂單，如需更改請聯繫門市開通修改', 3600);
         addAlcLine(itemId, chosen);
       });
     },
@@ -735,6 +755,9 @@ function openLogin() {
         }
         S.user = { name, phone, code, verified: v.verified, verifyMode: v.mode, verifyError: !!v.error };
         save(LS.user, S.user);
+        S.hasOrder = localHasOrder();
+        // 登入後自動把「他已經點過的餐點」載出來（沒有訂單就維持正常點餐）
+        refreshMyOrderState(true);
         const draft = S.draft;   // 若正在選套餐，登入後回到原畫面
         closeModal();
         renderAll();
@@ -1115,6 +1138,7 @@ async function submitOrder(ev) {
   };
   S.orders = S.orders.filter((o) => o.orderId !== orderId).concat(record);
   save(LS.orders, S.orders);
+  S.hasOrder = true;                     // 送出後只能檢視
 
   S.editing = null;
   S.cart = { sets: [], alc: [] };
@@ -1249,6 +1273,7 @@ function bindEvents() {
       return syncDraftUI();
     }
     if (d.addSet !== undefined) {
+      if (hasOrder()) { closeModal(); return toast('您已送出訂單，如需更改請聯繫門市開通修改', 3600); }
       if (!draftComplete()) {
         S.draft.tried = true;
         syncDraftUI();
@@ -1265,6 +1290,7 @@ function bindEvents() {
     }
     if (d.addAlc !== undefined) {
       if (needLogin('請先登入才能選購餐點')) return;
+      if (hasOrder()) return toast('您已送出訂單，如需更改請聯繫門市開通修改', 3600);
       if (alcLocked()) return toast('請先選擇一份春節套餐才能加點單點');
       const item = ALC.find((a) => a.id === d.addAlc);
       if (tempsOf(item.name).length) return openTempPicker(d.addAlc);
@@ -1313,6 +1339,7 @@ function bindEvents() {
   /* 封面兩顆按鈕 */
   $('#btnStart').addEventListener('click', () => {
     if (!loggedIn()) return needLogin('請先登入（訂位手機號碼＋驗證碼）才能開始點餐');
+    if (hasOrder()) return openMyOrders();
     document.querySelector('#sets').scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
   $('#btnCoverLogin').addEventListener('click', () => (S.user ? openMyOrders() : openLogin()));
@@ -1346,6 +1373,7 @@ function init() {
   initHeaderScroll();
   renderAll();
   initReveal();
+  if (loggedIn()) refreshMyOrderState(false);   // 已登入就先把訂單狀態抓回來（不自動彈窗）
 }
 
 /* 頂部列：捲過封面後轉為紙色 */
