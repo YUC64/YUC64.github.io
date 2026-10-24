@@ -1148,13 +1148,28 @@ async function cancelOrder(orderId) {
   };
   let delivered = false;
   const useApi = (CFG.ordersWrite && CFG.ordersWrite.mode === 'apps-script' && apiReady());
+
+  // 取消時把當初的金額一起送出去，避免試算表上的金額被清空
+  const savedCart = S.cart;
+  let money = { setsSubtotal: '', alcSubtotal: '', service: '', alcLines: [] };
+  try {
+    if (o.cart) {
+      S.cart = JSON.parse(JSON.stringify(o.cart));
+      const cc = calc();
+      const sm = buildSummary();
+      money = { setsSubtotal: cc.setsSubtotal, alcSubtotal: cc.alcSubtotal, service: cc.service, alcLines: sm.alcLines };
+    }
+  } catch (e) { /* 舊資料沒有 cart 就只送金額以外的欄位 */ }
+  finally { S.cart = savedCart; }
+
   try {
     if (useApi) {
       await postOrderToApi({
         action: '取消', orderId, name: o.name, phone: o.phone,
         code: o.code || (S.user && S.user.code) || '', pickup: o.pickup, headcount: o.headcount,
-        sets: o.summary, setsTotal: '', alacarte: '', alacarteTotal: '',
-        service: '', total: o.total, note: o.note || '無', ts: values.ts,
+        sets: o.summary, setsTotal: money.setsSubtotal,
+        alacarte: money.alcLines.join('、'), alacarteTotal: money.alcSubtotal,
+        service: money.service, total: o.total, note: o.note || '無', ts: values.ts,
       });
       delivered = true;
     } else {

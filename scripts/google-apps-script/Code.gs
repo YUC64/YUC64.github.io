@@ -361,8 +361,10 @@ function safe_(v) {
 }
 
 function num_(v) {
+  // 注意：Number('') === 0，空字串要當「沒有值」而不是 0，否則改單／取消會把金額歸零
+  if (v === '' || v === null || v === undefined) return '';
   const n = Number(v);
-  return isFinite(n) ? n : '';
+  return isNaN(n) ? '' : n;
 }
 
 function jsonOut(obj) {
