@@ -47,7 +47,7 @@ const TEMPS = {
 };
 const tempsOf = (name) => TEMPS[stripSize(name)] || [];
 
-/* 套餐的「飲料升級」選項（PDF：可加價升級酒類/特調飲品；價差依現場公告，購物車不加價） */
+/* 套餐的「飲料升級」選項（PDF：可加價升級酒類/特調飲品；價差依現場公告，訂單不加價） */
 const DRINK_UPGRADES = ['荔枝冰茶啵啵', '泰象啤酒', '臺虎嗨啤'];
 
 /** 5 個春節套餐。fixed = 隨套餐附贈的「套餐特選」；groups = 需選 N 的品項。 */

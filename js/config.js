@@ -38,16 +38,10 @@ window.CONFIG = {
   },
 
   // ---------------------------------------------------------------------------
-  // 員工專用頁（/staff.html）與訂位驗證設定
+  // 訂單試算表（Apps Script 會把訂單寫進這張表，僅供備查／核對用）
+  //   訂位名單表：https://docs.google.com/spreadsheets/d/1vDdLKtOsXu_DbLqwxDzd8i_Dlr_Ya95NddFEBKFXOOQ/edit
   // ---------------------------------------------------------------------------
-  staff: {
-    // 訂位名單試算表：只分享給員工的 Google 帳號（不要把連結公開）
-    sheetUrl: 'https://docs.google.com/spreadsheets/d/1vDdLKtOsXu_DbLqwxDzd8i_Dlr_Ya95NddFEBKFXOOQ/edit',
-    // 訂單回應試算表（Google 表單回應匯集處）
-    ordersSheetUrl: '',
-    // 值班電話（員工頁顯示）
-    dutyPhone: '',
-  },
+  ordersSheetUrl: 'https://docs.google.com/spreadsheets/d/1qaJy5BOywcLwlE4tPdWtdNnaVA1gV6G1a8qe4yrOtIk/edit',
 
   // ---------------------------------------------------------------------------
   // Apps Script API（同一個網址同時提供「訂位驗證」與「訂單寫入」）

@@ -1,11 +1,11 @@
 /* =============================================================================
  *  饗泰多 SIAM MORE｜除夕線上預點餐 — 前端主程式（Vanilla JS，無框架、無後端）
  *
- *  資料流：瀏覽器 → 購物車（記憶體 + localStorage）→ Google 表單 formResponse
+ *  資料流：瀏覽器 → 訂單內容（記憶體 + localStorage）→ Google 表單 formResponse
  *  規則（依門市菜單 PDF）：
- *    1. 未登入只能瀏覽菜單，不能選購（加入購物車／結帳都要登入）
+ *    1. 未登入只能瀏覽菜單，不能選購（加入訂單／結帳都要登入）
  *    2. 必須先加入一份「春節多人套餐」，才能單點加點
- *    3. 套餐內容需依「選 N」規則選滿才能加入購物車（飲料可逐杯選冰／去冰／熱）
+ *    3. 套餐內容需依「選 N」規則選滿才能加入訂單（飲料可逐杯選冰／去冰／熱）
  *    4. 金額 = 套餐 + 單點，另加 10% 服務費；每人最低消費 $600
  *    5. 辣度依 PDF 辣椒圖示數量顯示
  * ========================================================================== */
@@ -224,7 +224,7 @@ function openSetConfig(setId, editLine = null) {
         <span class="font-bold text-ink-mute">金額</span>
         <span class="text-xl font-black">${fmt(def.price)}</span>
       </div>
-      <button data-add-set class="w-full rounded-full py-3 text-sm font-black transition">加入購物車</button>
+      <button data-add-set class="w-full rounded-full py-3 text-sm font-black transition">加入訂單</button>
       <p data-draft-hint class="mt-2 text-center text-[12px] font-bold text-ink-mute"></p>
     </div>`, {
     onMount: (root) => {
@@ -296,11 +296,11 @@ function syncDraftUI() {
     btn.textContent = '登入後加入';
   } else {
     btn.className = 'btn btn-solid w-full text-[11.5px]';
-    btn.textContent = '加入購物車';
+    btn.textContent = '加入訂單';
   }
   $('[data-draft-hint]').textContent = !ok
-    ? '請依「選 N」規則選滿後再加入購物車'
-    : (loggedIn() ? '內容已選滿，可以加入購物車' : '內容已選滿，登入後即可加入購物車');
+    ? '請依「選 N」規則選滿後再加入訂單'
+    : (loggedIn() ? '內容已選滿，可以加入訂單' : '內容已選滿，登入後即可加入訂單');
 }
 
 /* ================================================================ 單點區 */
@@ -370,7 +370,7 @@ function openTempPicker(itemId) {
         ${temps.map((t, i) => `<button class="chip ${i === 0 ? 'on' : ''}" data-temp="${esc(t)}">${esc(t)}</button>`).join('')}
       </div>
       <button id="btnTempAdd" class="mt-4 w-full rounded-full bg-brand py-3 text-sm font-black text-ink hover:bg-brand-dark">
-        加入購物車
+        加入訂單
       </button>
     </div>`, {
     onMount: (root) => {
@@ -394,10 +394,10 @@ function addAlcLine(itemId, temp) {
   if (line) line.qty += 1; else S.cart.alc.push({ id: itemId, temp: temp || '', qty: 1 });
   persistCart();
   renderAll();
-  toast(`${item.name}${temp ? `（${temp}）` : ''} 已加入購物車`);
+  toast(`${item.name}${temp ? `（${temp}）` : ''} 已加入訂單`);
 }
 
-/* ================================================================ 購物車 */
+/* ================================================================ 訂單內容 */
 function setLineHTML(line) {
   const def = SETS.find((s) => s.id === line.setId);
   if (!def) return '';
@@ -463,7 +463,7 @@ function renderCart() {
     body.innerHTML = `<div class="grid h-full place-items-center text-center">
       <div>
         <p class="text-4xl">🛒</p>
-        <p class="mt-2 font-black">購物車還是空的</p>
+        <p class="mt-2 font-black">訂單還是空的</p>
         <p class="mt-1 text-sm text-ink-mute">${loggedIn() ? '先挑一份春節套餐，再來加點單點菜色吧！' : '登入後就可以開始點餐。'}</p>
         <a href="#sets" data-close-cart class="mt-3 inline-block rounded-full bg-ink px-5 py-2 text-sm font-bold text-white">去挑套餐</a>
       </div></div>`;
@@ -501,6 +501,13 @@ function renderCart() {
   $('#cartCountTop').classList.toggle('hidden', !c.count);
   $('#cartCountBar').textContent = c.count;
   $('#cartTotalBar').textContent = fmt(c.total);
+
+  // 訂單頁面只在登入後出現（未登入純瀏覽菜單）
+  const on = loggedIn();
+  const topBtn = $('#btnCartTop');
+  if (topBtn) topBtn.classList.toggle('hidden', !on);
+  const bar = $('#mobileBar');
+  if (bar) bar.classList.toggle('hidden', !on);
   if ($('#btnCheckout')) $('#btnCheckout').addEventListener('click', openCheckout);
 }
 
@@ -741,6 +748,7 @@ function doLogout() {
   S.user = null;
   save(LS.user, null);
   closeDrawer();
+  toggleCart(false);
   renderAll();
   toast('已登出，登出後只能瀏覽菜單');
 }
@@ -811,7 +819,7 @@ function renderMember() {
       <a href="#sets" data-drawer-close class="flex items-center justify-between border-b border-[rgba(23,20,15,.08)] py-3.5 text-[12.5px] tracking-[.12em] transition hover:text-gold">春節多人套餐 <span class="text-ink-mute">›</span></a>
       <a href="#alacarte" data-drawer-close class="flex items-center justify-between border-b border-[rgba(23,20,15,.08)] py-3.5 text-[12.5px] tracking-[.12em] transition hover:text-gold">單點加點 <span class="text-ink-mute">›</span></a>
       <button data-menu-action="guide" class="flex w-full items-center justify-between border-b border-[rgba(23,20,15,.08)] py-3.5 text-left text-[12.5px] tracking-[.12em] transition hover:text-gold">訂購說明 <span class="text-ink-mute">›</span></button>
-      <button data-menu-action="cart" class="flex w-full items-center justify-between border-b border-[rgba(23,20,15,.08)] py-3.5 text-left text-[12.5px] tracking-[.12em] transition hover:text-gold">我的購物車 <span class="text-ink-mute">›</span></button>
+      <button data-menu-action="cart" class="flex w-full items-center justify-between border-b border-[rgba(23,20,15,.08)] py-3.5 text-left text-[12.5px] tracking-[.12em] transition hover:text-gold">訂單內容 <span class="text-ink-mute">›</span></button>
     </nav>
     <div class="mt-7 border-t border-[rgba(23,20,15,.12)] pt-5 text-[10.5px] leading-[2] tracking-[.06em] text-ink-mute">
       <p class="caps mb-2.5">Notice</p>
@@ -821,7 +829,7 @@ function renderMember() {
       <p>・不含線上結帳，款項請於現場結清</p>
       ${CFG.brand.phone ? `<p class="mt-2 font-bold text-ink-soft">訂購專線 ${esc(CFG.brand.phone)}</p>` : ''}
     </div>
-    <p class="mt-7 text-center"><a href="staff.html" class="text-[9.5px] tracking-[.24em] text-ink-mute/60 transition hover:text-ink-mute">員工專用</a></p>`;
+`;
 }
 
 /* ================================================================ 我的訂單 */
@@ -882,7 +890,7 @@ function openMyOrders() {
 function openCheckout() {
   if (!loggedIn()) { toast('請先登入才能結帳'); return openLogin(); }
   if (alcLocked()) return toast('請先選擇一份春節套餐');
-  if (!calc().count) return toast('購物車是空的');
+  if (!calc().count) return toast('訂單是空的');
 
   const c = calc();
   const { min, max, slots } = { min: CFG.orders.openFrom, max: CFG.orders.openTo, slots: CFG.orders.timeSlots };
@@ -985,7 +993,7 @@ async function submitOrder(ev) {
   if (!/^09\d{8}$/.test(phone)) return toast('電話格式錯誤（09 開頭共 10 碼）');
   if (!date || !time) return toast('請選擇預計取餐時間');
   if (alcLocked()) return toast('請先選擇春節套餐');
-  if (!calc().count) return toast('購物車是空的');
+  if (!calc().count) return toast('訂單是空的');
 
   const c = calc();
   const { setLines, alcLines } = buildSummary();
@@ -1036,7 +1044,7 @@ async function submitOrder(ev) {
     btn.disabled = false;
     btn.textContent = '確認送出訂單';
     toast(`送出失敗：${err.message || '請稍後再試'}`, 4200);
-    return;   // 保留購物車內容，讓客人可以重試
+    return;   // 保留訂單內容，讓客人可以重試
   }
 
   const record = {
@@ -1115,7 +1123,7 @@ function showSuccess(record, delivered) {
   toast(delivered ? '訂單已送出' : '已建立本機訂單（示範模式）');
 }
 
-/* -------- 修改已送出的訂單：載回購物車 -------- */
+/* -------- 修改已送出的訂單：載回訂單內容 -------- */
 function loadOrderForEdit(orderId) {
   const o = S.orders.find((x) => x.orderId === orderId);
   if (!o) return toast('找不到這筆訂單');
@@ -1201,12 +1209,12 @@ function bindEvents() {
       return syncDraftUI();
     }
     if (d.addSet !== undefined) {
-      if (!loggedIn()) return needLogin('請先登入才能把套餐加入購物車');
+      if (!loggedIn()) return needLogin('請先登入才能把套餐加入訂單');
       const existing = S.cart.sets.findIndex((l) => l.lineId === S.draft.lineId);
       if (existing >= 0) S.cart.sets[existing] = S.draft; else S.cart.sets.push(S.draft);
       S.draft = null;
       persistCart(); closeModal(); renderAll();
-      toast('套餐已加入購物車');
+      toast('套餐已加入訂單');
       return;
     }
     if (d.addAlc !== undefined) {

@@ -26,6 +26,8 @@ const RESERVATION_TAB = '訂位名單';
 
 const ORDER_SHEET_NAME = '饗泰多 除夕預點餐 訂單';
 const ORDER_TAB = '訂單';
+/** 訂單要寫進哪一份試算表：填 ID 就固定用這一張（留空 = 由 setupAll 自動建立新檔） */
+const ORDER_SHEET_ID_FIXED = '1qaJy5BOywcLwlE4tPdWtdNnaVA1gV6G1a8qe4yrOtIk';
 const ORDER_HEADERS = [
   '訂單編號', '狀態', '動作', '姓名', '電話', '預計取餐時間', '用餐人數',
   '套餐內容', '套餐金額', '單點內容', '單點金額', '服務費', '總金額', '備註', '最後更新',
@@ -152,7 +154,7 @@ function fillCodes_(report) {
 function setupOrderSheet(report) {
   const props = PropertiesService.getScriptProperties();
   let ss = null;
-  const savedId = props.getProperty('ORDER_SHEET_ID');
+  const savedId = ORDER_SHEET_ID_FIXED || props.getProperty('ORDER_SHEET_ID');
   if (savedId) { try { ss = SpreadsheetApp.openById(savedId); } catch (e) { ss = null; } }
   if (!ss) {
     ss = SpreadsheetApp.create(ORDER_SHEET_NAME);
@@ -287,7 +289,7 @@ function listOrders(phone) {
 
 /* ============================ 內部工具 ============================ */
 function orderSheet_() {
-  const id = PropertiesService.getScriptProperties().getProperty('ORDER_SHEET_ID');
+  const id = ORDER_SHEET_ID_FIXED || PropertiesService.getScriptProperties().getProperty('ORDER_SHEET_ID');
   if (!id) throw new Error('尚未建立訂單表，請先執行 setupAll()');
   return SpreadsheetApp.openById(id);
 }
