@@ -671,7 +671,7 @@ async function postOrderToApi(payload) {
       order_not_found: '找不到這筆訂單（可能已被取消）',
       no_order_id: '訂單編號遺失，請重新整理後再試',
     };
-    throw new Error(map[data.error] || `寫入失敗（${data.error || '未知錯誤'}）`);
+    throw new Error(`${map[data.error] || '寫入失敗'}〔${data.error || '未知'}／${payload.orderId}／${payload.action}〕`);
   }
   return data;   // { mode:'created'|'updated', row, status }
 }
