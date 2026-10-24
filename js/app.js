@@ -973,13 +973,20 @@ function renderMyOrders(list, offline) {
       const byId = (id) => list.find((o) => o.orderId === id);
       $$('[data-edit-order]', root).forEach((b) => b.addEventListener('click', () => {
         const o = byId(b.dataset.editOrder);
-        if (!o) return;
-        if (o.cart) { S.cart = JSON.parse(JSON.stringify(o.cart)); persistCart(); }
+        if (!o) return toast('找不到這筆訂單，請重新整理後再試');
+        if (o.cart) {
+          S.cart = JSON.parse(JSON.stringify(o.cart));
+        } else {
+          S.cart = { sets: [], alc: [] };   // 舊訂單沒有存內容 → 讓客人重新選
+        }
+        persistCart();
         S.editing = o.orderId;
         closeModal();
         renderAll();
         toggleCart(true);
-        toast('已載入原訂單內容，改好後按「前往填寫訂購資料」重新送出');
+        toast(o.cart
+          ? '已載入原訂單內容，改好後按「前往填寫訂購資料」重新送出'
+          : '此訂單沒有可載入的內容，請重新選擇菜色後送出', 4200);
       }));
       $$('[data-cancel-order]', root).forEach((b) => b.addEventListener('click', () => {
         cancelOrder(b.dataset.cancelOrder);
@@ -1339,7 +1346,7 @@ function bindEvents() {
       persistCart(); renderAll(); return toast('已移除套餐');
     }
     if (d.cat !== undefined) { S.cat = d.cat; renderTabs(); renderAlc(); return; }
-    if (d.editOrder !== undefined) return loadOrderForEdit(d.editOrder);
+    if (d.editOrder !== undefined) return;   // 由「我的訂單」彈窗自己的處理器負責（伺服器資料）
     if (d.cancelOrder !== undefined) return cancelOrder(d.cancelOrder);
     if (d.closeCart !== undefined) return toggleCart(false);
   });
