@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>饗泰多 SIAM MORE｜除夕線上預點餐</title>
-<meta name="description" content="饗泰多 2027 春節除夕線上預點餐：登入後先選春節多人套餐，再加點單點菜色，填寫姓名、電話與預計取餐時間即可送出。">
-<meta name="theme-color" content="#FFD400">
+<meta name="description" content="饗泰多 2027 春節除夕線上預點餐：訂位客人用手機號碼＋驗證碼登入，先選春節多人套餐再加點單點菜色。">
+<meta name="theme-color" content="#141414">
 <link rel="icon" type="image/png" href="assets/img/favicon.png">
 <link rel="apple-touch-icon" href="assets/img/favicon.png">
 
@@ -34,124 +34,80 @@
 </head>
 <body class="bg-[#FFFBF0] text-ink font-sans antialiased">
 
-<!-- ============================ 頂部導覽 ============================ -->
-<header class="sticky top-0 z-40 bg-ink text-white shadow-card">
+<!-- ============================ 頂部（只有 LOGO／購物車／三條線） ============================ -->
+<header class="sticky top-0 z-40 bg-ink/95 text-white backdrop-blur">
   <div class="mx-auto flex max-w-6xl items-center gap-3 px-4 py-2.5">
-    <a href="#" class="flex shrink-0 items-center gap-2">
+    <a href="#" class="flex shrink-0 items-center" aria-label="回首頁">
       <img src="assets/img/logo-white.png" alt="饗泰多 SIAM MORE" class="h-8 w-auto sm:h-9"
            onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'饗泰多',className:'text-lg font-black'}))">
     </a>
-    <nav class="ml-auto flex items-center gap-1.5 text-sm">
-      <a href="#sets" class="hidden rounded-full px-3 py-1.5 hover:bg-white/10 sm:block">春節套餐</a>
-      <a href="#alacarte" class="hidden rounded-full px-3 py-1.5 hover:bg-white/10 sm:block">單點加點</a>
-      <button id="btnLogin" class="rounded-full bg-white/10 px-3 py-1.5 font-bold hover:bg-white/20">
-        <span id="loginLabel">登入</span>
-      </button>
-      <button id="btnCartTop" class="relative rounded-full bg-brand px-3 py-1.5 font-black text-ink hover:bg-brand-dark">
+    <div class="ml-auto flex items-center gap-2">
+      <button id="btnCartTop" class="relative rounded-full bg-brand px-3.5 py-2 text-[13px] font-black text-ink transition hover:bg-brand-dark">
         購物車
         <span id="cartCountTop" class="absolute -right-1 -top-1 hidden h-5 min-w-[20px] rounded-full bg-thai-red px-1 text-[11px] font-black leading-5 text-white">0</span>
       </button>
-    </nav>
+      <button id="btnDrawer" class="relative grid h-10 w-10 place-items-center rounded-full bg-white/10 transition hover:bg-white/20" aria-label="開啟選單">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <path d="M2 5h16M2 10h16M2 15h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <span id="drawerDot" class="absolute right-2.5 top-2.5 hidden h-2 w-2 rounded-full bg-brand"></span>
+      </button>
+    </div>
   </div>
 </header>
 
-<!-- ============================ 主視覺 ============================ -->
-<section class="relative overflow-hidden bg-brand">
+<!-- ============================ 封面 ============================ -->
+<section class="relative flex min-h-[76vh] items-center justify-center overflow-hidden bg-ink">
   <picture>
     <source media="(max-width: 640px)" srcset="assets/img/hero-mobile.jpg">
-    <img src="assets/img/hero.jpg" alt="饗泰多除夕年菜" class="absolute inset-0 h-full w-full object-cover opacity-95" onerror="this.style.display='none'">
+    <img src="assets/img/hero.jpg" alt="" class="absolute inset-0 h-full w-full object-cover opacity-90" onerror="this.style.display='none'">
   </picture>
-  <div class="absolute inset-0 bg-gradient-to-r from-ink/95 via-ink/82 to-ink/45"></div>
-  <div class="relative mx-auto max-w-6xl px-4 py-10 sm:py-16">
-    <div class="mb-1 flex w-fit items-center rounded-2xl bg-ink/60 px-3 py-2 backdrop-blur-sm">
-      <img src="assets/img/logo-white.png" alt="饗泰多 SIAM MORE" class="h-11 w-auto sm:h-14"
-           onerror="this.style.display='none'">
-    </div>
-    <p class="mt-4 inline-flex items-center gap-2 rounded-full bg-brand px-3 py-1 text-[11px] font-black tracking-widest text-ink">
-      2027 春節內用年菜
+  <div class="absolute inset-0 bg-gradient-to-b from-ink/85 via-ink/70 to-ink/95"></div>
+
+  <div class="relative mx-auto w-full max-w-3xl px-6 py-16 text-center sm:py-24">
+    <img src="assets/img/logo-white.png" alt="饗泰多 SIAM MORE" class="mx-auto h-16 w-auto sm:h-20" onerror="this.style.display='none'">
+    <p class="mt-7 text-[11px] font-black tracking-[.35em] text-brand">2027 春節內用年菜</p>
+    <h1 class="mt-3 text-4xl font-black leading-[1.15] text-white sm:text-6xl">除夕線上預點餐</h1>
+    <p class="mx-auto mt-4 max-w-md text-sm leading-relaxed text-white/75 sm:text-base">
+      先挑一份春節套餐，再依喜好加點菜色。到店直接入座，不用等。
     </p>
-    <h1 class="mt-3 text-4xl font-black leading-tight text-white sm:text-6xl">除夕線上預點餐</h1>
-    <p class="mt-3 max-w-xl text-sm leading-relaxed text-white/85 sm:text-base">
-      登入後先挑一份春節多人套餐，再依喜好加點單點菜色；填寫姓名、手機與預計取餐時間，我們就會替您備好年夜飯。
+
+    <div class="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
+      <button id="btnStart" class="w-full rounded-full bg-brand px-9 py-4 text-base font-black text-ink shadow-pop transition hover:bg-brand-dark active:scale-[.98] sm:w-auto">
+        開始點餐
+      </button>
+      <button id="btnCoverLogin" class="w-full rounded-full border border-white/35 px-9 py-4 text-base font-bold text-white transition hover:bg-white/10 sm:w-auto">
+        <span id="coverLoginLabel">登入 / 我的訂單</span>
+      </button>
+    </div>
+
+    <p class="mt-6 text-[11px] leading-relaxed text-white/45">
+      限訂位客人下單・內用加收 10% 服務費・每人最低消費 $600
     </p>
-    <div class="mt-5 flex flex-wrap gap-2 text-xs font-bold">
-      <span class="rounded-lg bg-white/15 px-3 py-1.5 text-white">① 手機登入</span>
-      <span class="rounded-lg bg-white/15 px-3 py-1.5 text-white">② 選春節套餐</span>
-      <span class="rounded-lg bg-white/15 px-3 py-1.5 text-white">③ 加點單點</span>
-      <span class="rounded-lg bg-white/15 px-3 py-1.5 text-white">④ 填資料送出</span>
-    </div>
-    <div class="mt-5 flex flex-wrap gap-3">
-      <a href="#sets" class="rounded-full bg-brand px-5 py-2.5 text-sm font-black text-ink shadow-card hover:bg-brand-dark">開始點餐</a>
-      <button id="btnOrdersHero" class="rounded-full border border-white/40 px-5 py-2.5 text-sm font-bold text-white hover:bg-white/10">查詢／修改我的訂單</button>
-    </div>
+    <a href="#sets" class="mt-10 inline-block text-[12px] text-white/35 transition hover:text-white/70">先看看菜單 ↓</a>
   </div>
 </section>
 
-<!-- ============================ 規則提示 ============================ -->
-<div class="border-b border-amber-200 bg-amber-50">
-  <div class="mx-auto flex max-w-6xl flex-wrap items-center gap-x-5 gap-y-1 px-4 py-2.5 text-[12px] font-medium text-amber-900">
-    <span>⚠ 春節期間需加收 <b>10% 服務費</b></span>
-    <span>⚠ 每人最低消費 <b>$600</b></span>
-    <span>⚠ 單點須先點選任一「春節多人套餐」</span>
-    <span>⚠ 需登入才能選購</span>
-    <span class="text-amber-700/80">僅供參考，菜單內容以現場供應為主</span>
-    <span id="deadlineNote" class="ml-auto hidden font-bold text-thai-red"></span>
-  </div>
+<!-- ============================ 一行規則提示 ============================ -->
+<div class="border-b border-ink/10 bg-white">
+  <p class="mx-auto max-w-6xl px-4 py-2.5 text-center text-[11px] leading-relaxed text-ink-mute">
+    春節期間單點須先點選任一「春節多人套餐」・辣度
+    <img src="assets/img/spicy.png" alt="辣" class="inline-block h-3 w-auto align-[-1px]">
+    <img src="assets/img/spicy.png" alt="辣" class="inline-block h-3 w-auto align-[-1px]"> 較辣
+    <span id="deadlineNote" class="hidden font-bold text-thai-red"></span>
+  </p>
 </div>
 
-<main class="mx-auto max-w-6xl px-4 pb-28 pt-6">
-
-  <!-- ======================= 尚未登入提示 ======================= -->
-  <section id="loginPrompt" class="mb-6 flex flex-wrap items-center gap-3 rounded-2xl border-2 border-siam-purple/30 bg-siam-purple/10 p-4">
-    <img src="assets/img/logo-mark.png" alt="" class="h-10 w-auto">
-    <div class="min-w-0 flex-1">
-      <p class="font-black text-ink">訂位客人登入後才能選購</p>
-      <p class="text-[12px] text-ink-soft">未登入時只能瀏覽菜單。請用<b>訂位時留的手機號碼</b>登入，系統會核對訂位資料，通過後才能點餐。</p>
-    </div>
-    <button id="btnLoginPrompt" class="rounded-full bg-siam-purple px-5 py-2.5 text-sm font-black text-white hover:bg-siam-dark">手機登入／註冊</button>
-  </section>
-
-  <!-- ======================= 訂購說明（已移到上方） ======================= -->
-  <section id="guide" class="scroll-mt-20 rounded-2xl border border-ink/10 bg-white p-5 text-sm leading-relaxed text-ink-soft shadow-card">
-    <details open>
-      <summary class="cursor-pointer list-none">
-        <span class="flex items-center gap-2">
-          <span class="text-lg font-black text-ink">訂購說明</span>
-          <span class="text-[11px] font-bold text-ink-mute">（點一下可收合）</span>
-        </span>
-      </summary>
-      <ol class="mt-3 list-decimal space-y-1.5 pl-5">
-        <li><b>限訂位客人</b>：用訂位時留的<b>手機號碼</b>＋門市提供的<b>驗證碼</b>登入後，才能選購與送出訂單；未登入僅能瀏覽菜單。</li>
-        <li>春節期間<b>限點選任一「春節多人套餐」，方能進行單點加點</b>（本網站已自動鎖定單點區）。</li>
-        <li>套餐與單點金額計算後，另加 <b>10% 服務費</b>；每人最低消費 <b>$600</b>。</li>
-        <li>套餐內每個品類都需依「<b>選 N</b>」規則選滿（含飲料）；飲料可依杯選擇<b>冰／去冰／熱</b>。</li>
-        <li>辣度依門市菜單標示：
-          <img src="assets/img/spicy.png" alt="辣" class="inline-block h-3.5 w-auto align-[-2px]">
-          <img src="assets/img/spicy.png" alt="辣" class="inline-block h-3.5 w-auto align-[-2px]">
-          較辣・
-          <img src="assets/img/spicy.png" alt="辣" class="inline-block h-3.5 w-auto align-[-2px]">
-          微辣・未標示者為不辣。
-        </li>
-        <li>甜點與飲料可選<b>冰／去冰／冷／熱</b>（摩摩喳喳：冰／去冰；椰香黑糯米：冷／熱；泰式奶茶：冰／去冰／熱）。</li>
-        <li>完成訂購後畫面會顯示<b>訂單編號</b>；之後用同一支手機＋驗證碼登入，可在「我的訂單」<b>修改或取消</b>（修改會直接覆蓋門市試算表上的同一筆，不會多一列）。</li>
-        <li>飲料「加價升級酒類／特調飲品」之價差依現場公告，於現場結帳時計算。</li>
-        <li>本頁為預先點餐登記，<b>不含線上結帳與金流</b>，款項請於現場結清。</li>
-        <li>僅供參考，菜單內容以現場供應為主。</li>
-      </ol>
-    </details>
-  </section>
-
-  <!-- ======================= 我的會員狀態卡 ======================= -->
-  <section id="memberCard" class="mt-6 hidden rounded-2xl border border-ink/10 bg-white p-4 shadow-card"></section>
+<main class="mx-auto max-w-6xl px-4 pb-28 pt-8">
 
   <!-- ======================= 春節套餐 ======================= -->
-  <section id="sets" class="mt-10 scroll-mt-20">
+  <section id="sets" class="scroll-mt-20">
     <div class="mb-4 flex flex-wrap items-end justify-between gap-2">
       <div>
         <h2 class="text-2xl font-black">① 春節多人套餐</h2>
-        <p class="text-sm text-ink-mute">春節期間<b class="text-thai-red">必須先選擇一份套餐</b>，才能進行單點加點。</p>
+        <p class="text-sm text-ink-mute">春節期間<b class="text-thai-red">必須先選擇一份套餐</b>，才能單點加點。</p>
       </div>
-      <p class="text-xs text-ink-mute">套餐價已含白飯與飲料；服務費另計 10%</p>
+      <p class="text-xs text-ink-mute">已含白飯與飲料；服務費另計 10%</p>
     </div>
     <div id="setList" class="grid gap-6 lg:grid-cols-2"></div>
   </section>
@@ -163,12 +119,6 @@
         <h2 class="text-2xl font-black">② 單點加點</h2>
         <p id="alcHint" class="text-sm text-ink-mute">先選一份春節套餐即可解鎖單點菜色。</p>
       </div>
-      <p class="flex items-center gap-1 text-xs text-ink-mute">
-        辣度：
-        <img src="assets/img/spicy.png" alt="微辣" class="h-3.5 w-auto">
-        <img src="assets/img/spicy.png" alt="辣" class="h-3.5 w-auto">
-        較辣（依門市菜單標示）
-      </p>
     </div>
 
     <!-- 未選套餐時的提示 -->
@@ -180,7 +130,7 @@
     </div>
 
     <!-- 分類頁籤 -->
-    <div id="catTabs" class="sticky top-[52px] z-30 -mx-4 mb-4 overflow-x-auto bg-[#FFFBF0]/95 px-4 py-2 backdrop-blur no-scrollbar">
+    <div id="catTabs" class="sticky top-[56px] z-30 -mx-4 mb-4 overflow-x-auto bg-[#FFFBF0]/95 px-4 py-2 backdrop-blur no-scrollbar">
       <div class="flex gap-2 whitespace-nowrap"></div>
     </div>
     <div id="alcList" class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4"></div>
@@ -188,11 +138,11 @@
 </main>
 
 <!-- ============================ 頁尾 ============================ -->
-<footer class="border-t border-ink/10 bg-ink py-8 text-center text-xs text-white/70">
+<footer class="border-t border-ink/10 bg-ink py-9 text-center text-xs text-white/70">
   <img src="assets/img/logo-white.png" alt="饗泰多 SIAM MORE" class="mx-auto h-10 w-auto" onerror="this.style.display='none'">
   <p class="mt-3">2027 春節除夕線上預點餐系統</p>
   <p id="footContact" class="mt-1"></p>
-  <p class="mt-3 text-white/40">前端純 HTML / CSS / Vanilla JS，資料寫入 Google 表單（無後端、無線上金流）。</p>
+  <p class="mt-3 text-white/40">僅供參考，菜單內容以現場供應為主・本頁不含線上結帳，款項請於現場結清</p>
   <p class="mt-5"><a href="staff.html" class="text-[11px] text-white/20 transition hover:text-white/60">員工專用</a></p>
 </footer>
 
@@ -206,6 +156,16 @@
     <button id="btnCartBar" class="rounded-full bg-ink px-6 py-3 text-sm font-black text-white">查看購物車</button>
   </div>
 </div>
+
+<!-- ============================ 三條線選單 ============================ -->
+<div id="drawerOverlay" class="fixed inset-0 z-50 hidden bg-ink/50 backdrop-blur-sm"></div>
+<aside id="drawer" class="fixed inset-y-0 right-0 z-50 flex w-80 max-w-[86vw] translate-x-full flex-col bg-[#FFFBF0] shadow-pop transition-transform duration-300">
+  <div class="flex items-center justify-between border-b border-ink/10 bg-white px-4 py-3">
+    <img src="assets/img/logo.png" alt="饗泰多 SIAM MORE" class="h-7 w-auto" onerror="this.style.display='none'">
+    <button data-drawer-close class="grid h-9 w-9 place-items-center rounded-full bg-ink/5 transition hover:bg-ink/10" aria-label="關閉選單">✕</button>
+  </div>
+  <div id="drawerBody" class="flex-1 overflow-y-auto px-4 py-4"></div>
+</aside>
 
 <!-- ============================ 購物車側欄 ============================ -->
 <div id="cartOverlay" class="fixed inset-0 z-50 hidden bg-ink/50 backdrop-blur-sm"></div>

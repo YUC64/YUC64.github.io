@@ -727,36 +727,105 @@ function openLogin() {
   });
 }
 
+/* ================================================================ 三條線選單 */
+function openDrawer() {
+  renderMember();
+  $('#drawer').classList.remove('translate-x-full');
+  $('#drawerOverlay').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+function closeDrawer() {
+  $('#drawer').classList.add('translate-x-full');
+  $('#drawerOverlay').classList.add('hidden');
+  document.body.style.overflow = '';
+}
+function toggleDrawer(on) {
+  if (on === undefined) on = $('#drawer').classList.contains('translate-x-full');
+  return on ? openDrawer() : closeDrawer();
+}
+
+function doLogout() {
+  S.user = null;
+  save(LS.user, null);
+  closeDrawer();
+  renderAll();
+  toast('已登出，登出後只能瀏覽菜單');
+}
+
+/** 訂購說明（原本佔版面的說明文字，收進選單的彈窗） */
+function openGuide() {
+  const sp = '<img src="assets/img/spicy.png" alt="辣" class="inline-block h-3.5 w-auto align-[-2px]">';
+  openModal(`
+    <div class="flex items-start justify-between border-b border-ink/10 px-5 py-3">
+      <h3 class="text-lg font-black">訂購說明</h3>
+      <button data-close-modal class="grid h-9 w-9 place-items-center rounded-full bg-ink/5 hover:bg-ink/10" aria-label="關閉">✕</button>
+    </div>
+    <ol class="space-y-2 px-5 py-4 text-[13px] leading-relaxed text-ink-soft list-decimal pl-9">
+      <li><b>限訂位客人</b>：用訂位時留的<b>手機號碼</b>＋門市提供的<b>驗證碼</b>登入後，才能選購與送出訂單；未登入僅能瀏覽菜單。</li>
+      <li>春節期間<b>限點選任一「春節多人套餐」，方能進行單點加點</b>（本網站已自動鎖定單點區）。</li>
+      <li>套餐與單點金額計算後，另加 <b>10% 服務費</b>；每人最低消費 <b>$600</b>。</li>
+      <li>套餐內每個品類都需依「<b>選 N</b>」規則選滿（含飲料）；飲料可依杯選擇<b>冰／去冰／熱</b>。</li>
+      <li>辣度依門市菜單標示：${sp}${sp} 較辣・${sp} 微辣・未標示者為不辣。</li>
+      <li>甜點與飲料可選<b>冰／去冰／冷／熱</b>（摩摩喳喳：冰／去冰；椰香黑糯米：冷／熱；泰式奶茶：冰／去冰／熱）。</li>
+      <li>完成訂購後畫面會顯示<b>訂單編號</b>；之後用同一支手機＋驗證碼登入，可在「我的訂單」<b>修改或取消</b>（修改會直接覆蓋門市試算表上的同一筆，不會多一列）。</li>
+      <li>飲料「加價升級酒類／特調飲品」之價差依現場公告，於現場結帳時計算。</li>
+      <li>本頁為預先點餐登記，<b>不含線上結帳與金流</b>，款項請於現場結清。</li>
+      <li>僅供參考，菜單內容以現場供應為主。</li>
+    </ol>
+    <div class="border-t border-ink/10 px-5 py-3">
+      <button data-close-modal class="w-full rounded-full bg-ink py-3 text-sm font-black text-white">知道了</button>
+    </div>`);
+}
+
+/** 三條線選單的內容：會員區塊＋導覽＋用餐須知 */
 function renderMember() {
-  const card = $('#memberCard');
-  $('#loginPrompt').classList.toggle('hidden', loggedIn());
-  if (!S.user) {
-    card.classList.add('hidden');
-    $('#loginLabel').textContent = '登入';
-    return;
-  }
-  const mine = S.orders.filter((o) => o.phone === S.user.phone);
-  card.classList.remove('hidden');
-  $('#loginLabel').textContent = S.user.name;
-  card.innerHTML = `<div class="flex flex-wrap items-center gap-3">
-    <span class="grid h-11 w-11 place-items-center rounded-full bg-siam-purple text-lg font-black text-white">${esc(S.user.name.slice(0, 1))}</span>
-    <div class="min-w-0">
-      <p class="font-black">${esc(S.user.name)} <span class="text-[11px] font-normal text-ink-mute">已登入・可以選購</span></p>
-      <p class="text-[12px] text-ink-mute">${esc(S.user.phone)}・本機訂單 ${mine.length} 筆</p>
-      <p class="text-[12px]">${verifyStateText(S.user)}</p>
+  const cl = $('#coverLoginLabel');
+  if (cl) cl.textContent = S.user ? '我的訂單' : '登入 / 我的訂單';
+  const dot = $('#drawerDot');
+  if (dot) dot.classList.toggle('hidden', !S.user);
+
+  const body = $('#drawerBody');
+  if (!body) return;
+  const mine = S.user ? S.orders.filter((o) => o.phone === S.user.phone) : [];
+
+  const member = S.user
+    ? `<div class="rounded-2xl border border-ink/10 bg-white p-4 shadow-card">
+        <div class="flex items-center gap-3">
+          <span class="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-siam-purple text-lg font-black text-white">${esc(S.user.name.slice(0, 1))}</span>
+          <div class="min-w-0">
+            <p class="truncate font-black">${esc(S.user.name)} <span class="text-[11px] font-normal text-ink-mute">已登入</span></p>
+            <p class="truncate text-[12px] text-ink-mute">${esc(S.user.phone)}・本機訂單 ${mine.length} 筆</p>
+            <p class="text-[12px]">${verifyStateText(S.user)}</p>
+          </div>
+        </div>
+        <div class="mt-3 grid grid-cols-2 gap-2">
+          <button data-menu-action="orders" class="rounded-full bg-ink px-4 py-2.5 text-[13px] font-black text-white">我的訂單</button>
+          <button data-menu-action="logout" class="rounded-full bg-ink/5 px-4 py-2.5 text-[13px] font-bold">登出</button>
+        </div>
+      </div>`
+    : `<div class="rounded-2xl border border-ink/10 bg-white p-4 shadow-card">
+        <p class="font-black">訂位客人登入</p>
+        <p class="mt-1 text-[12px] leading-relaxed text-ink-mute">請輸入訂位時留的手機號碼、姓名與門市提供的驗證碼。登入後才能選購與送出訂單。</p>
+        <button data-menu-action="login" class="mt-3 w-full rounded-full bg-brand px-4 py-3 text-sm font-black text-ink">登入 / 註冊</button>
+      </div>`;
+
+  body.innerHTML = `
+    ${member}
+    <nav class="mt-4 overflow-hidden rounded-2xl border border-ink/10 bg-white shadow-card">
+      <a href="#sets" data-drawer-close class="flex items-center justify-between px-4 py-3 text-[14px] font-bold hover:bg-brand/10">春節多人套餐 <span class="text-ink-mute">›</span></a>
+      <a href="#alacarte" data-drawer-close class="flex items-center justify-between border-t border-ink/10 px-4 py-3 text-[14px] font-bold hover:bg-brand/10">單點加點 <span class="text-ink-mute">›</span></a>
+      <button data-menu-action="guide" class="flex w-full items-center justify-between border-t border-ink/10 px-4 py-3 text-left text-[14px] font-bold hover:bg-brand/10">訂購說明 <span class="text-ink-mute">›</span></button>
+      <button data-menu-action="cart" class="flex w-full items-center justify-between border-t border-ink/10 px-4 py-3 text-left text-[14px] font-bold hover:bg-brand/10">我的購物車 <span class="text-ink-mute">›</span></button>
+    </nav>
+    <div class="mt-4 rounded-2xl border border-ink/10 bg-white p-4 text-[11px] leading-relaxed text-ink-mute shadow-card">
+      <p class="mb-1.5 text-[12px] font-black text-ink">用餐須知</p>
+      <p>・內用加收 10% 服務費・每人最低消費 $600</p>
+      <p>・春節期間須先點選任一春節多人套餐，才能單點加點</p>
+      <p>・完成後以同一支手機登入，可修改或取消訂單</p>
+      <p>・不含線上結帳，款項請於現場結清</p>
+      ${CFG.brand.phone ? `<p class="mt-2 font-bold text-ink-soft">訂購專線 ${esc(CFG.brand.phone)}</p>` : ''}
     </div>
-    <div class="ml-auto flex gap-2">
-      <button id="btnMyOrders" class="rounded-full bg-ink px-4 py-2 text-[12px] font-black text-white">我的訂單</button>
-      <button id="btnLogout" class="rounded-full bg-ink/5 px-4 py-2 text-[12px] font-bold">登出</button>
-    </div>
-  </div>`;
-  $('#btnMyOrders').addEventListener('click', openMyOrders);
-  $('#btnLogout').addEventListener('click', () => {
-    S.user = null;
-    save(LS.user, null);
-    renderAll();
-    toast('已登出，登出後只能瀏覽菜單');
-  });
+    <p class="mt-5 text-center"><a href="staff.html" class="text-[11px] text-ink-mute/60 hover:text-ink-mute">員工專用</a></p>`;
 }
 
 /* ================================================================ 我的訂單 */
@@ -1099,12 +1168,24 @@ async function cancelOrder(orderId) {
 /* ================================================================ 事件綁定 */
 function bindEvents() {
   document.addEventListener('click', (e) => {
-    const t = e.target.closest('[data-config-set],[data-pick],[data-upgrade],[data-add-set],[data-close-modal],[data-close-cart],[data-add-alc],[data-qty-alc],[data-del-alc],[data-qty-set],[data-del-set],[data-cat],[data-edit-order],[data-cancel-order]');
+    const t = e.target.closest('[data-config-set],[data-pick],[data-upgrade],[data-add-set],[data-close-modal],[data-close-cart],[data-add-alc],[data-qty-alc],[data-del-alc],[data-qty-set],[data-del-set],[data-cat],[data-edit-order],[data-cancel-order],[data-menu-action],[data-drawer-close]');
     if (!t) return;
     const d = t.dataset;
 
     if (d.configSet !== undefined) return openSetConfig(d.configSet);
     if (d.closeModal !== undefined) return closeModal();
+
+    /* 三條線選單 */
+    if (d.drawerClose !== undefined) return closeDrawer();
+    if (d.menuAction !== undefined) {
+      closeDrawer();
+      if (d.menuAction === 'login') return openLogin();
+      if (d.menuAction === 'logout') return doLogout();
+      if (d.menuAction === 'orders') return openMyOrders();
+      if (d.menuAction === 'guide') return openGuide();
+      if (d.menuAction === 'cart') return toggleCart(true);
+      return;
+    }
 
     if (d.pick !== undefined) {   // 空字串屬性也是假值，一律用 !== undefined 判斷
       const g = SETS.find((s) => s.id === S.draft.setId).groups.find((x) => x.key === d.pick);
@@ -1171,9 +1252,22 @@ function bindEvents() {
   $('#btnCartTop').addEventListener('click', () => toggleCart());
   $('#btnCartBar').addEventListener('click', () => toggleCart());
   $('#cartOverlay').addEventListener('click', () => toggleCart(false));
-  $('#btnLogin').addEventListener('click', () => (S.user ? openMyOrders() : openLogin()));
-  $('#btnLoginPrompt').addEventListener('click', openLogin);
-  $('#btnOrdersHero').addEventListener('click', () => (S.user ? openMyOrders() : openLogin()));
+
+  /* 三條線選單 */
+  $('#btnDrawer').addEventListener('click', openDrawer);
+  $('#drawerOverlay').addEventListener('click', closeDrawer);
+
+  /* 封面兩顆按鈕 */
+  $('#btnStart').addEventListener('click', () => {
+    if (!loggedIn()) return needLogin('請先登入（訂位手機號碼＋驗證碼）才能開始點餐');
+    document.querySelector('#sets').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+  $('#btnCoverLogin').addEventListener('click', () => (S.user ? openMyOrders() : openLogin()));
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    closeDrawer(); closeModal(); toggleCart(false);
+  });
 }
 
 /* ================================================================ 初始化 */
