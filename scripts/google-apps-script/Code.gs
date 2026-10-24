@@ -183,6 +183,7 @@ function setupOrderSheet(report) {
   sh.getRange(1, 1, 1, ORDER_HEADERS.length).setFontWeight('bold').setBackground('#FFD400');
   sh.setFrozenRows(1);
   sh.getRange('A2:A').setNumberFormat('@');   // 訂單編號當文字
+  sh.getRange('F2:F').setNumberFormat('@');   // 取餐時間當文字（避免被轉成日期）
   sh.getRange('E2:E').setNumberFormat('@');   // 電話當文字（保留前導 0）
   sh.setColumnWidth(1, 160).setColumnWidth(4, 100).setColumnWidth(5, 130);
   return ss.getUrl();
@@ -280,7 +281,7 @@ function doPost(e) {
     orderId, status, action,
     keep(body.name ? safe_(body.name) : '', 3),
     phone,                                              // 一律用驗證過的正規化電話（含前導 0）
-    keep(body.pickup ? safe_(body.pickup) : '', 5),
+    keep(body.pickup ? pickupStr_(body.pickup) : '', 5),
     keep(body.headcount === undefined || body.headcount === '' ? '' : Number(body.headcount) || '', 6),
     keep(body.sets ? safe_(body.sets) : '', 7),
     keep(num_(body.setsTotal), 8),
@@ -293,14 +294,18 @@ function doPost(e) {
   ];
 
   if (rowIndex > 0) {
-    // 先設文字格式，避免電話被當成數字而掉了前導 0
+    // 先設文字格式：電話保住前導 0、取餐時間不被轉成日期
     sh.getRange(rowIndex, 5).setNumberFormat('@');
+    sh.getRange(rowIndex, 6).setNumberFormat('@');
     sh.getRange(rowIndex, 1, 1, ORDER_HEADERS.length).setValues([values]);
-    return jsonOut({ ok: true, orderId: orderId, mode: 'updated', row: rowIndex, status: status });
+    const tidyUpd = tidyOrderSheet_();     // 取消 → 搬到「已取消」分頁＋重新排序
+    return jsonOut({ ok: true, orderId: orderId, mode: 'updated', row: rowIndex, status: status,
+                     archived: tidyUpd.moved, active: tidyUpd.kept });
   }
 
   const newRow = sh.getLastRow() + 1;
   sh.getRange(newRow, 5).setNumberFormat('@');          // 電話欄先設文字
+  sh.getRange(newRow, 6).setNumberFormat('@');          // 取餐時間也保持文字
   sh.getRange(newRow, 1, 1, ORDER_HEADERS.length).setValues([values]);
 
   const tidyInfo = tidyOrderSheet_();
@@ -345,10 +350,12 @@ function tidyOrderSheet_() {
     const startRow = Math.max(arc.getLastRow() + 1, 2);
     arc.getRange(startRow, 1, moved.length, width).setValues(moved);
     arc.getRange(startRow, 5, moved.length, 1).setNumberFormat('@');
+    arc.getRange(startRow, 6, moved.length, 1).setNumberFormat('@');
   }
 
-  // ② 排序：取餐時間（字串 YYYY-MM-DD HH:mm 可直接比大小）→ 送出時間（越早越前面）
+  // ② 取餐時間正規化成文字，再依「取餐時間 → 送出時間」排序
   const timeOf = function (v) { return v instanceof Date ? v.getTime() : 0; };
+  keep.concat(moved).forEach(function (r) { r[5] = pickupStr_(r[5]); });
   keep.sort(function (a, b) {
     const pa = String(a[5] || ''), pb = String(b[5] || '');
     if (pa !== pb) return pa < pb ? -1 : 1;
@@ -359,12 +366,21 @@ function tidyOrderSheet_() {
   if (keep.length) {
     sh.getRange(2, 1, keep.length, width).setValues(keep);
     sh.getRange(2, 5, keep.length, 1).setNumberFormat('@');
+    sh.getRange(2, 6, keep.length, 1).setNumberFormat('@');
   }
   const oldCount = last - 1;
   if (oldCount > keep.length) {
     sh.getRange(2 + keep.length, 1, oldCount - keep.length, width).clearContent();
   }
   return { moved: moved.length, kept: keep.length };
+}
+
+/** 員工看板被鎖住時執行這個解除（15 分鐘內錯 20 次會鎖） */
+function clearStaffLock() {
+  const cache = CacheService.getScriptCache();
+  cache.remove('staffLock');
+  cache.remove('staffTry');
+  Logger.log('已解除員工看板鎖定，可以再試了');
 }
 
 /** 手動整理（在 Apps Script 編輯器選這個函式執行即可） */
@@ -419,6 +435,7 @@ function staffOrders_(p) {
     const last = sh.getLastRow();
     if (last < 2) return;
     sources.push({
+      tab: name,
       rows: sh.getRange(2, 1, last - 1, ORDER_HEADERS.length).getValues(),
       disp: sh.getRange(2, 1, last - 1, ORDER_HEADERS.length).getDisplayValues(),
     });
@@ -438,7 +455,7 @@ function staffOrders_(p) {
       action: String(r[2] || '').trim(),
       name: String(r[3] || '').trim(),
       phone: normPhone(r[4]),
-      pickup: String(r[5] || '').trim(),
+      pickup: pickupStr_(r[5]),
       headcount: String(r[6] || '').trim(),
       sets: String(r[7] || '').trim(),
       setsTotal: num_(r[8]),
@@ -448,6 +465,7 @@ function staffOrders_(p) {
       total: num_(r[12]),
       note: String(r[13] || '').trim(),
       updated: String(d[14] || '').trim(),
+      src: src.tab,
     });
   }
   });
@@ -485,6 +503,21 @@ function findReservation_(phone) {
 function idxOf_(headers, re, fallback) {
   for (let i = 0; i < headers.length; i++) if (re.test(headers[i])) return i;
   return fallback;
+}
+
+/** 取餐時間一律轉成 'yyyy-MM-dd HH:mm' 文字（試算表可能把它變成 Date） */
+function pickupStr_(v) {
+  if (v instanceof Date) {
+    return Utilities.formatDate(v, 'Asia/Taipei', 'yyyy-MM-dd HH:mm');
+  }
+  const s = String(v == null ? '' : v).trim();
+  if (!s) return '';
+  const m = s.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})[ T](\d{1,2}):(\d{2})/);
+  if (m) {
+    const pad = function (x) { return (String(x).length < 2 ? '0' : '') + x; };
+    return m[1] + '-' + pad(m[2]) + '-' + pad(m[3]) + ' ' + pad(m[4]) + ':' + m[5];
+  }
+  return s;
 }
 
 function normPhone(v) {

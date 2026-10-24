@@ -134,6 +134,10 @@ python scripts/mock-apps-script.py 8770     # 模擬 doGet/doPost
 
 想手動整理一次：在 Apps Script 編輯器選 **`tidyNow`** → 執行，執行紀錄會說搬了幾筆、留了幾筆。
 
+其他小工具：**`clearStaffLock`**（員工看板被鎖住時解除）、**`setupOrderSheet`**（重建欄位）。
+
+改完程式要能生效，記得 **部署 → 管理部署作業 → 編輯 → 版本：新版本 → 部署**。
+
 > 如果連「已取消」分頁都不想要，直接刪掉那個分頁就好；之後再有取消會自動重建。
 
 ## 員工訂單看板（/staff.html）
