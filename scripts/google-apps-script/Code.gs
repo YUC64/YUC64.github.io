@@ -205,6 +205,7 @@ function doGet(e) {
   if (p.staff) {
     // ?staff=1&pw=&setedit=<訂單編號>&open=1|0 → 開放／收回修改權限（用 GET 避免 POST 轉址問題）
     if (p.setedit) return staffSetEdit_(p);
+    if (p.delorder) return staffDeleteOrder_(p);
     return staffOrders_(p);
   }
 
@@ -527,6 +528,29 @@ function staffOrders_(p) {
     return String(a.orderId) < String(b.orderId) ? -1 : 1;   // 依下單順序
   });
   return jsonOut({ ok: true, count: orders.length, orders: orders, updatedAt: new Date().toISOString() });
+}
+
+/** 員工：刪除某張訂單（讓客人可以重新點餐） */
+function staffDeleteOrder_(p) {
+  if (String(p.pw || '') !== STAFF_PASSWORD) return jsonOut({ ok: false, error: 'bad_password' });
+  const oid = String(p.delorder || '').trim();
+  if (!oid) return jsonOut({ ok: false, error: 'no_order_id' });
+  const ss = orderSheet_();
+  const tabs = [ORDER_TAB, ARCHIVE_TAB];
+  for (let t = 0; t < tabs.length; t++) {
+    const sh = ss.getSheetByName(tabs[t]);
+    if (!sh) continue;
+    const last = sh.getLastRow();
+    if (last < 2) continue;
+    const rows = sh.getRange(2, 1, last - 1, ORDER_HEADERS.length).getValues();
+    for (let i = rows.length - 1; i >= 0; i--) {
+      if (String(rows[i][0] || '').trim() === oid) {
+        sh.deleteRow(i + 2);
+        return jsonOut({ ok: true, orderId: oid, deleted: true, tab: tabs[t] });
+      }
+    }
+  }
+  return jsonOut({ ok: false, error: 'order_not_found' });
 }
 
 /** 員工：開放／收回某張訂單的修改權限（GET，回 {ok, editable}） */

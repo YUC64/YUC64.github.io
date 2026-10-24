@@ -190,6 +190,10 @@
               class="ml-auto border border-[rgba(23,20,15,.22)] px-3 py-1.5 text-[10.5px] tracking-[.1em] transition hover:bg-ink hover:text-white">
               ${o.editable ? '收回權限' : '開放修改'}
             </button>
+            <button data-del-order="${esc(o.orderId)}"
+              class="border border-thai-red/40 px-3 py-1.5 text-[10.5px] tracking-[.1em] text-thai-red transition hover:bg-thai-red hover:text-white">
+              刪除訂單
+            </button>
           </div>
         </dl>
       </div>
@@ -302,6 +306,34 @@
     $('#search').addEventListener('input', (e) => { S.q = e.target.value; render(); });
     $('#sortBy').addEventListener('change', (e) => { S.sort = e.target.value; render(); });
     $('#list').addEventListener('click', async (e) => {
+      // 刪除訂單（客人的單會被移掉，之後可以重新點餐）
+      const del = e.target.closest('[data-del-order]');
+      if (del) {
+        e.stopPropagation();
+        const oid = del.dataset.delOrder;
+        if (!confirm(`確定要刪除訂單 ${oid} 嗎？
+刪除後這位客人可以重新點餐，且無法復原。`)) return;
+        del.disabled = true;
+        del.textContent = '刪除中…';
+        const box = $('#errBox');
+        try {
+          const url = `${ENDPOINT}?staff=1&pw=${encodeURIComponent(S.pw)}&delorder=${encodeURIComponent(oid)}&t=${Date.now()}`;
+          const res = await fetch(url, { cache: 'no-store' });
+          const data = await res.json();
+          if (!data.ok) throw new Error(data.error || 'failed');
+          await refresh();
+          box.classList.remove('hidden');
+          box.className = 'mt-4 border border-thai-green/30 bg-thai-green/5 px-4 py-3 text-[11.5px] leading-relaxed text-thai-green';
+          box.innerHTML = `已刪除訂單 <b>${esc(oid)}</b>${data.tab ? '（' + esc(data.tab) + '）' : ''}。這位客人現在可以重新點餐。`;
+        } catch (err) {
+          box.classList.remove('hidden');
+          box.className = 'mt-4 border border-thai-red/30 bg-thai-red/5 px-4 py-3 text-[11.5px] leading-relaxed text-thai-red';
+          box.textContent = `刪除失敗：${err.message}`;
+          del.disabled = false;
+          del.textContent = '刪除訂單';
+        }
+        return;
+      }
       const b = e.target.closest('[data-toggle-edit]');
       if (!b) return;
       e.stopPropagation();
