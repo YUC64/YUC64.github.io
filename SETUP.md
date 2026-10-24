@@ -153,7 +153,7 @@ python scripts/mock-apps-script.py 8770     # 模擬 doGet/doPost
 **密碼設定**：`Code.gs` 第 33 行
 
 ```js
-const STAFF_PASSWORD = 'SIAMMORE2027';   // ← 改成你自己的密碼
+const STAFF_PASSWORD = '8888';   // ← 目前的員工密碼
 ```
 
 改完要**重新部署**（管理部署作業 → 編輯 → 新版本）才會生效。

@@ -31,7 +31,7 @@ const ARCHIVE_TAB = '已取消';   // 取消的訂單搬到這裡，主表保持
 const ORDER_SHEET_ID_FIXED = '1qaJy5BOywcLwlE4tPdWtdNnaVA1gV6G1a8qe4yrOtIk';
 
 /** 員工看板密碼：改這一行後「重新部署」即生效（請換成自己的密碼） */
-const STAFF_PASSWORD = 'SIAMMORE2027';
+const STAFF_PASSWORD = '8888';
 const STAFF_MAX_TRY = 20;        // 15 分鐘內錯超過這次數就暫時鎖住
 const ORDER_HEADERS = [
   '訂單編號', '狀態', '動作', '姓名', '電話', '預計取餐時間', '用餐人數',
