@@ -202,7 +202,11 @@ function doGet(e) {
   const p = (e && e.parameter) || {};
 
   // 員工看板：?staff=1&pw=密碼 → 回傳訂單清單（需密碼，因為含客人姓名電話）
-  if (p.staff) return staffOrders_(p);
+  if (p.staff) {
+    // ?staff=1&pw=&setedit=<訂單編號>&open=1|0 → 開放／收回修改權限（用 GET 避免 POST 轉址問題）
+    if (p.setedit) return staffSetEdit_(p);
+    return staffOrders_(p);
+  }
 
   // 客人查自己的訂單：?mine=1&phone=09xxxxxxxx&code=1234
   if (p.mine) return myOrders_(p);
@@ -523,6 +527,27 @@ function staffOrders_(p) {
     return String(a.orderId) < String(b.orderId) ? -1 : 1;   // 依下單順序
   });
   return jsonOut({ ok: true, count: orders.length, orders: orders, updatedAt: new Date().toISOString() });
+}
+
+/** 員工：開放／收回某張訂單的修改權限（GET，回 {ok, editable}） */
+function staffSetEdit_(p) {
+  const cache = CacheService.getScriptCache();
+  if (String(p.pw || '') !== STAFF_PASSWORD) return jsonOut({ ok: false, error: 'bad_password' });
+  const oid = String(p.setedit || '').trim();
+  const open = String(p.open || '') === '1';
+  if (!oid) return jsonOut({ ok: false, error: 'no_order_id' });
+
+  const sh = orderSheet_().getSheetByName(ORDER_TAB);
+  const last = sh ? sh.getLastRow() : 0;
+  if (last < 2) return jsonOut({ ok: false, error: 'order_not_found' });
+  const rows = sh.getRange(2, 1, last - 1, ORDER_HEADERS.length).getValues();
+  for (let i = rows.length - 1; i >= 0; i--) {
+    if (String(rows[i][0] || '').trim() === oid) {
+      sh.getRange(i + 2, COL_FLAG + 1).setValues([[open ? 'open' : '']]);
+      return jsonOut({ ok: true, orderId: oid, editable: open, row: i + 2 });
+    }
+  }
+  return jsonOut({ ok: false, error: 'order_not_found' });
 }
 
 /** 客人查自己的訂單（只回傳這支電話的，需驗證碼） */

@@ -156,7 +156,7 @@ function setCardHTML(def) {
   const fixed = def.fixed.length
     ? `<p class="mt-2.5 text-[11.5px] leading-[1.95] tracking-[.04em] text-ink-mute"><span class="text-ink">套餐特選</span>　${def.fixed.map((f) => esc(f) + spicyHTML(f)).join('、')}</p>`
     : '';
-  const openLabel = loggedIn() ? '選擇菜色' : '查看菜色';
+  const openLabel = hasOrder() ? '觀看菜色' : (loggedIn() ? '選擇菜色' : '查看菜色');
   return `<article class="card-enter overflow-hidden">
     <div class="relative">
       ${imgBlock(def.img, def.name, '🍛', 'aspect-[3/2]')}
@@ -319,6 +319,13 @@ function syncDraftUI() {
   $$('[data-upgrade]').forEach((b) => b.classList.toggle('on', S.draft.upgrades.includes(b.dataset.upgrade)));
 
   const btn = $('[data-add-set]');
+  if (hasOrder()) {
+    btn.disabled = true;
+    btn.className = 'btn btn-line is-disabled w-full text-[11.5px]';
+    btn.textContent = '已送出訂單・需門市開放才能修改';
+    $('[data-draft-hint]').textContent = '目前僅供觀看菜色內容';
+    return;
+  }
   btn.disabled = false;          // 可按：按了才知道哪幾項沒選到
   if (!ok) {
     btn.className = 'btn btn-line w-full text-[11.5px]';
@@ -541,7 +548,12 @@ function renderCart() {
   // 訂單頁面只在登入後出現（未登入純瀏覽菜單）
   const on = loggedIn();
   const topBtn = $('#btnCartTop');
-  if (topBtn) topBtn.classList.toggle('hidden', !on);
+  if (topBtn) {
+    topBtn.classList.toggle('hidden', !on);
+    // 已送出訂單 → 這顆按鈕就是「我的訂單」
+    const lbl = topBtn.querySelector('[data-top-label]');
+    if (lbl) lbl.textContent = hasOrder() ? '我的訂單' : '訂單';
+  }
   const bar = $('#mobileBar');
   if (bar) bar.classList.toggle('hidden', !on || !c.count);   // 沒有餐點時不佔版面
   if ($('#btnCheckout')) $('#btnCheckout').addEventListener('click', openCheckout);
@@ -1332,7 +1344,7 @@ function bindEvents() {
     if (d.closeCart !== undefined) return toggleCart(false);
   });
 
-  $('#btnCartTop').addEventListener('click', () => toggleCart());
+  $('#btnCartTop').addEventListener('click', () => (hasOrder() ? openMyOrders() : toggleCart()));
   $('#btnCartBar').addEventListener('click', () => toggleCart());
   $('#cartOverlay').addEventListener('click', () => toggleCart(false));
 

@@ -306,31 +306,25 @@
       if (!b) return;
       e.stopPropagation();
       const open = b.dataset.open === '1';
+      const oid = b.dataset.toggleEdit;
       b.disabled = true;
       b.textContent = open ? '開通中…' : '收回中…';
+      const box = $('#errBox');
       try {
-        const res = await fetch(ENDPOINT, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({ action: open ? '開放修改' : '收回修改', orderId: b.dataset.toggleEdit, staffPw: S.pw }),
-        });
+        const url = `${ENDPOINT}?staff=1&pw=${encodeURIComponent(S.pw)}&setedit=${encodeURIComponent(oid)}&open=${open ? '1' : '0'}&t=${Date.now()}`;
+        const res = await fetch(url, { cache: 'no-store' });
         const data = await res.json();
         if (!data.ok) throw new Error(data.error || 'failed');
-        if (open) {
-          try { await navigator.clipboard.writeText(`${b.dataset.toggleEdit}`); } catch (e2) {}
-        }
         await refresh();
-        const box = $('#errBox');
         box.classList.remove('hidden');
         box.className = 'mt-4 border border-thai-green/30 bg-thai-green/5 px-4 py-3 text-[11.5px] leading-relaxed text-thai-green';
         box.innerHTML = open
-          ? `已開放訂單 <b>${esc(b.dataset.toggleEdit)}</b> 的修改權限（<b>客人只能修改一次</b>，改完自動收回）。請通知客人重新登入後到「我的訂單」修改。`
-          : `已收回訂單 <b>${esc(b.dataset.toggleEdit)}</b> 的修改權限。`;
+          ? `已開放訂單 <b>${esc(oid)}</b> 的修改權限（<b>客人只能修改一次</b>，改完自動收回）。請通知客人重新登入後到「我的訂單」修改。`
+          : `已收回訂單 <b>${esc(oid)}</b> 的修改權限。`;
       } catch (err) {
-        const box = $('#errBox');
         box.classList.remove('hidden');
         box.className = 'mt-4 border border-thai-red/30 bg-thai-red/5 px-4 py-3 text-[11.5px] leading-relaxed text-thai-red';
-        box.textContent = `操作失敗：${err.message}`;
+        box.textContent = `操作失敗：${err.message}（請確認 Code.gs 已更新並重新部署）`;
         b.disabled = false;
         b.textContent = open ? '開放修改' : '收回權限';
       }
