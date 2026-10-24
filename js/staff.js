@@ -20,7 +20,7 @@
     orders: [],
     seen: new Set(),      // 上一次就存在的訂單（用來標記新進單）
     filter: 'active',     // active | 新訂單 | 已修改 | 已取消 | all
-    sort: 'pickup',       // pickup = 依取餐時間｜recent = 最新送出
+    sort: 'oldest',       // oldest = 最早送出（出餐順序）｜recent = 最新送出
     q: '',
     timer: null,
     loading: false,
@@ -132,12 +132,7 @@
 
   function sortList(arr) {
     const byId = (a, b) => String(a.orderId).localeCompare(String(b.orderId));
-    if (S.sort === 'recent') return arr.sort((a, b) => byId(b, a));   // 訂單編號含時間，新的排前面
-    return arr.sort((a, b) => {
-      const pa = a.pickup || '', pb = b.pickup || '';
-      if (pa !== pb) return pa < pb ? -1 : 1;                          // 取餐時間早的在前
-      return byId(a, b);
-    });
+    return S.sort === 'recent' ? arr.sort((a, b) => byId(b, a)) : arr.sort((a, b) => byId(a, b));
   }
 
   function filtered() {
@@ -146,7 +141,7 @@
       if (S.filter === 'active' && isCancelled(o)) return false;
       if (S.filter !== 'active' && S.filter !== 'all' && o.status !== S.filter) return false;
       if (!q) return true;
-      return [o.orderId, o.name, o.phone, o.pickup, o.sets, o.alacarte, o.note]
+      return [o.orderId, o.name, o.phone, o.sets, o.alacarte, o.note]
         .join(' ').toLowerCase().includes(q);
     }));
   }
@@ -165,11 +160,10 @@
               <span class="mono ml-1.5 text-[11px] text-ink-mute">${esc(o.phone)}</span>
             </p>
             <p class="mt-1 flex flex-wrap gap-x-2 text-[10px] text-ink-mute md:hidden">
-              <span>${esc(o.pickup) || '—'}</span><span>・${people}</span>
+              <span>${people}</span>
               <span class="ml-auto">${esc(o.updated).replace(/^\d+\/\d+\/\s*/, '')}</span>
             </p>
           </div>
-          <div class="hidden text-[11.5px] md:block">${esc(o.pickup) || '—'}</div>
           <div class="hidden text-[11.5px] md:block">${people}</div>
           <div class="mono text-[13px] ${isCancelled(o) ? 'text-ink-mute line-through' : ''}">${money(o.total)}</div>
           <div><span class="badge ${badgeClass(o.status)}">${esc(o.status)}</span></div>
@@ -188,6 +182,15 @@
           <div><dt class="inline text-ink-mute">總計：</dt><dd class="inline mono font-medium">${money(o.total)}</dd></div>
           <div class="sm:col-span-2"><dt class="inline text-ink-mute">備註：</dt><dd class="inline">${esc(o.note) || '—'}</dd></div>
           <div class="sm:col-span-2"><dt class="inline text-ink-mute">動作／更新：</dt><dd class="inline">${esc(o.action) || '—'}・${esc(o.updated) || '—'}</dd></div>
+          <div class="sm:col-span-2 flex items-center gap-3 border-t border-[rgba(23,20,15,.08)] pt-3">
+            <span class="text-[11px] ${o.editable ? 'font-medium text-thai-green' : 'text-ink-mute'}">
+              修改權限：${o.editable ? '已開放（客人可改一次）' : '未開放'}
+            </span>
+            <button data-toggle-edit="${esc(o.orderId)}" data-open="${o.editable ? '0' : '1'}"
+              class="ml-auto border border-[rgba(23,20,15,.22)] px-3 py-1.5 text-[10.5px] tracking-[.1em] transition hover:bg-ink hover:text-white">
+              ${o.editable ? '收回權限' : '開放修改'}
+            </button>
+          </div>
         </dl>
       </div>
     </article>`;
@@ -224,10 +227,11 @@
 
   /* ───────────────────────── 匯出 / 列印 ───────────────────────── */
   function csv() {
-    const cols = ['訂單編號', '狀態', '動作', '姓名', '電話', '預計取餐時間', '用餐人數', '套餐內容', '套餐金額', '單點內容', '單點金額', '服務費', '總金額', '備註', '最後更新'];
+    const cols = ['訂單編號', '狀態', '動作', '姓名', '電話', '用餐人數', '套餐內容', '套餐金額', '單點內容', '單點金額', '服務費', '總金額', '備註', '最後更新', '修改權限'];
     const rows = filtered().map((o) => [
-      o.orderId, o.status, o.action, o.name, o.phone, o.pickup, o.headcount,
+      o.orderId, o.status, o.action, o.name, o.phone, o.headcount,
       o.sets, o.setsTotal, o.alacarte, o.alacarteTotal, o.service, o.total, o.note, o.updated,
+      o.editable ? '已開放' : '',
     ]);
     const q = (v) => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`;
     const body = [cols, ...rows].map((r) => r.map(q).join(',')).join('\r\n');
@@ -297,6 +301,41 @@
     $('#autoRefresh').addEventListener('change', startAuto);
     $('#search').addEventListener('input', (e) => { S.q = e.target.value; render(); });
     $('#sortBy').addEventListener('change', (e) => { S.sort = e.target.value; render(); });
+    $('#list').addEventListener('click', async (e) => {
+      const b = e.target.closest('[data-toggle-edit]');
+      if (!b) return;
+      e.stopPropagation();
+      const open = b.dataset.open === '1';
+      b.disabled = true;
+      b.textContent = open ? '開通中…' : '收回中…';
+      try {
+        const res = await fetch(ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action: open ? '開放修改' : '收回修改', orderId: b.dataset.toggleEdit, staffPw: S.pw }),
+        });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error || 'failed');
+        if (open) {
+          try { await navigator.clipboard.writeText(`${b.dataset.toggleEdit}`); } catch (e2) {}
+        }
+        await refresh();
+        const box = $('#errBox');
+        box.classList.remove('hidden');
+        box.className = 'mt-4 border border-thai-green/30 bg-thai-green/5 px-4 py-3 text-[11.5px] leading-relaxed text-thai-green';
+        box.innerHTML = open
+          ? `已開放訂單 <b>${esc(b.dataset.toggleEdit)}</b> 的修改權限（<b>客人只能修改一次</b>，改完自動收回）。請通知客人重新登入後到「我的訂單」修改。`
+          : `已收回訂單 <b>${esc(b.dataset.toggleEdit)}</b> 的修改權限。`;
+      } catch (err) {
+        const box = $('#errBox');
+        box.classList.remove('hidden');
+        box.className = 'mt-4 border border-thai-red/30 bg-thai-red/5 px-4 py-3 text-[11.5px] leading-relaxed text-thai-red';
+        box.textContent = `操作失敗：${err.message}`;
+        b.disabled = false;
+        b.textContent = open ? '開放修改' : '收回權限';
+      }
+    });
+
     $('#tabs').addEventListener('click', (e) => {
       const b = e.target.closest('[data-tab]');
       if (!b) return;

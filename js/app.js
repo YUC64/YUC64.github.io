@@ -523,7 +523,7 @@ function renderCart() {
   const topBtn = $('#btnCartTop');
   if (topBtn) topBtn.classList.toggle('hidden', !on);
   const bar = $('#mobileBar');
-  if (bar) bar.classList.toggle('hidden', !on);
+  if (bar) bar.classList.toggle('hidden', !on || !c.count);   // 沒有餐點時不佔版面
   if ($('#btnCheckout')) $('#btnCheckout').addEventListener('click', openCheckout);
 }
 
@@ -631,6 +631,8 @@ async function postOrderToApi(payload) {
       bad_code: '驗證碼驗證失敗，請重新登入',
       not_found: '查無訂位資料，請重新登入',
       not_your_order: '這筆訂單不是這個手機號碼的',
+      already_ordered: '這支手機已經送過訂單了，如需更改請聯繫門市',
+      edit_locked: '訂單已送出，如需更改請聯繫門市開通修改',
       order_not_found: '找不到這筆訂單（可能已被取消）',
       no_order_id: '訂單編號遺失，請重新整理後再試',
     };
@@ -841,7 +843,7 @@ function renderMember() {
       <p class="caps mb-2.5">Notice</p>
       <p>・內用加收 10% 服務費・每人最低消費 $600</p>
       <p>・春節期間須先點選任一春節多人套餐，才能單點加點</p>
-      <p>・完成後以同一支手機登入，可修改或取消訂單</p>
+      <p>・送出後僅供檢視；如需更改請聯繫門市為您開啟修改</p>
       <p>・不含線上結帳，款項請於現場結清</p>
       ${CFG.brand.phone ? `<p class="mt-2 font-bold text-ink-soft">訂購專線 ${esc(CFG.brand.phone)}</p>` : ''}
     </div>
@@ -849,55 +851,100 @@ function renderMember() {
 }
 
 /* ================================================================ 我的訂單 */
+async function fetchMine() {
+  if (!apiReady() || !S.user) return null;
+  const url = `${API_BASE()}?mine=1&phone=${encodeURIComponent(S.user.phone)}&code=${encodeURIComponent(S.user.code || '')}&t=${Date.now()}`;
+  const res = await fetch(url, { cache: 'no-store' });
+  const data = await res.json();
+  return data && data.ok ? data : null;
+}
+
+function localAsMine() {
+  return S.orders.filter((o) => o.phone === S.user.phone).map((o) => ({
+    orderId: o.orderId, status: o.status, name: o.name, headcount: o.headcount,
+    sets: o.summary, total: o.total, updated: '',
+    editable: false, cart: o.cart || null, local: true,
+  }));
+}
+
 function openMyOrders() {
   if (!S.user) return openLogin();
-  const mine = S.orders.filter((o) => o.phone === S.user.phone).sort((a, b) => b.ts - a.ts);
-  const statusColor = { 新訂單: 'bg-thai-green/10 text-thai-green', 修改訂單: 'bg-amber-100 text-amber-800', 取消訂單: 'bg-thai-red/10 text-thai-red' };
-  openModal(`
-    <div class="flex items-start justify-between border-b border-ink/10 px-4 py-3">
-      <div>
-        <h3 class="text-lg font-black">我的訂單</h3>
-        <p class="text-[12px] text-ink-mute">${esc(S.user.name)}・${esc(S.user.phone)}</p>
+  openModal(`<div class="px-6 py-16 text-center text-[12px] tracking-[.22em] text-ink-mute">載入訂單中…</div>`);
+  loadMyOrders();
+}
+
+async function loadMyOrders() {
+  let list = null;
+  try {
+    const data = await fetchMine();
+    if (data) list = data.orders;
+  } catch (err) { /* 連線異常就用本機資料 */ }
+  const offline = !list;
+  if (offline) list = localAsMine();
+  renderMyOrders(list, offline);
+}
+
+function renderMyOrders(list, offline) {
+  const badge = { 新訂單: 'text-thai-green', 已修改: 'text-gold', 取消訂單: 'text-thai-red', 已取消: 'text-thai-red' };
+  const cards = list.length ? list.map((o) => {
+    const lines = String(o.sets || '').split(/\r?\n/).filter(Boolean);
+    const head = lines[0] || '—';
+    const rest = lines.slice(1);
+    return `
+    <div class="border border-[rgba(23,20,15,.12)] bg-white px-4 py-4">
+      <div class="flex items-baseline justify-between gap-3">
+        <p class="mono text-[12.5px]">${esc(o.orderId)}</p>
+        <p class="text-[11px] tracking-[.14em] ${badge[o.status] || 'text-ink-mute'}">${esc(o.status)}</p>
       </div>
-      <button data-close-modal class="grid h-9 w-9 place-items-center rounded-full bg-ink/5">✕</button>
-    </div>
-    <div class="space-y-3 px-4 py-4">
-      ${mine.length ? mine.map((o) => `
-        <div class="rounded-2xl border border-ink/10 bg-white p-3">
-          <div class="flex items-center justify-between gap-2">
-            <p class="font-black">${esc(o.orderId)}</p>
-            <span class="rounded-full px-2 py-0.5 text-[11px] font-black ${statusColor[o.status] || ''}">${esc(o.status)}</span>
-          </div>
-          <p class="mt-1 text-[12px] text-ink-mute">${o.headcount} 人・總計 ${fmt(o.total)}</p>
-          <p class="mt-1 line-clamp-2 text-[11px] leading-relaxed text-ink-soft">${esc(o.summary)}</p>
-          <div class="mt-2 flex gap-2">
-            <button data-edit-order="${esc(o.orderId)}" ${o.status === '取消訂單' ? 'disabled' : ''}
-              class="rounded-full bg-ink px-3 py-1.5 text-[12px] font-black text-white disabled:bg-gray-200 disabled:text-gray-400">修改內容</button>
-            <button data-cancel-order="${esc(o.orderId)}" ${o.status === '取消訂單' ? 'disabled' : ''}
-              class="rounded-full bg-ink/5 px-3 py-1.5 text-[12px] font-bold disabled:opacity-40">取消訂單</button>
-          </div>
-        </div>`).join('') : `<p class="py-8 text-center text-sm text-ink-mute">這支手機還沒有訂單紀錄</p>`}
-      <div class="rounded-2xl bg-[#F7F4EC] p-3">
-        <p class="text-[12px] font-black">找不到訂單？用訂單編號查詢</p>
-        <div class="mt-2 flex gap-2">
-          <input id="findOrder" placeholder="例如 XT2701251830" class="min-w-0 flex-1 rounded-xl border border-ink/15 px-3 py-2 text-sm outline-none focus:border-ink">
-          <button id="btnFindOrder" class="rounded-xl bg-ink px-4 text-[12px] font-black text-white">查詢</button>
-        </div>
-        <p id="findResult" class="mt-2 text-[11px] text-ink-mute"></p>
-      </div>
-      <p class="rounded-xl bg-amber-50 px-3 py-2 text-[11px] leading-relaxed text-amber-900">
-        ⓘ 無後端架構下，訂單紀錄保存在本機瀏覽器：換手機／清除瀏覽器資料後將無法在此查詢，
-        請保留訂單編號或直接來電門市。
+      <p class="mt-2 text-[13px]">${esc(head)}</p>
+      ${rest.length ? `<ul class="mt-1 space-y-0.5 text-[10.5px] leading-[1.9] text-ink-mute">${rest.map((l) => `<li>${esc(l)}</li>`).join('')}</ul>` : ''}
+      ${o.alacarte ? `<p class="mt-2 border-t border-[rgba(23,20,15,.08)] pt-2 text-[10.5px] leading-[1.9] text-ink-mute">單點：${esc(o.alacarte)}</p>` : ''}
+      <p class="mt-2.5 flex items-baseline justify-between text-[11px] text-ink-mute">
+        <span>${o.headcount || ''}${o.headcount ? ' 人' : ''}${o.updated ? '・' + esc(o.updated) : ''}</span>
+        <span class="num text-[14px] text-ink">${fmt(o.total)}</span>
       </p>
+      ${o.editable ? `
+        <div class="mt-3 grid grid-cols-2 gap-2">
+          <button data-edit-order="${esc(o.orderId)}" class="btn btn-solid px-3 py-2.5 text-[10.5px]">修改內容</button>
+          <button data-cancel-order="${esc(o.orderId)}" class="btn btn-line px-3 py-2.5 text-[10.5px]">取消訂單</button>
+        </div>`
+      : `<p class="mt-3 border-t border-[rgba(23,20,15,.08)] pt-2.5 text-[10.5px] leading-relaxed text-ink-mute">
+           已送出，僅供檢視。如需更改餐點請${tel('聯繫')}，由門市為您開啟修改。
+         </p>`}
+    </div>`;
+  }).join('') : `<p class="py-10 text-center text-[12px] tracking-[.16em] text-ink-mute">這支手機還沒有訂單</p>`;
+
+  openModal(`
+    <div class="flex items-start justify-between border-b border-[rgba(23,20,15,.1)] px-6 py-5">
+      <div>
+        <p class="caps">My Order</p>
+        <h3 class="serif mt-2 text-[19px] tracking-[.14em]">我的訂單</h3>
+        <p class="mt-2 text-[11px] tracking-[.08em] text-ink-mute">${esc(S.user.name)}・${esc(S.user.phone)}</p>
+      </div>
+      <button data-close-modal class="grid h-8 w-8 shrink-0 place-items-center text-ink/40 transition hover:text-ink" aria-label="關閉">
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M1 1l12 12M13 1L1 13" stroke="currentColor" stroke-width="1.2"/></svg>
+      </button>
+    </div>
+    <div class="space-y-3 px-6 py-5">
+      ${cards}
+      ${offline ? `<p class="text-[10px] leading-relaxed tracking-[.06em] text-ink-mute">
+        目前無法連線門市系統，以下為這台裝置的紀錄。</p>` : ''}
     </div>`, {
     onMount: (root) => {
-      $('#btnFindOrder', root).addEventListener('click', () => {
-        const q = $('#findOrder', root).value.trim().toUpperCase();
-        const hit = S.orders.find((o) => o.orderId.toUpperCase() === q);
-        $('#findResult', root).innerHTML = hit
-          ? `找到訂單 <b>${esc(hit.orderId)}</b>（${esc(hit.status)}）總計 ${fmt(hit.total)}；若為本機訂單可直接修改。`
-          : `查無此訂單。無後端架構下僅能查詢本機紀錄，請${tel()}。`;
-      });
+      const byId = (id) => list.find((o) => o.orderId === id);
+      $$('[data-edit-order]', root).forEach((b) => b.addEventListener('click', () => {
+        const o = byId(b.dataset.editOrder);
+        if (!o) return;
+        if (o.cart) { S.cart = JSON.parse(JSON.stringify(o.cart)); persistCart(); }
+        S.editing = o.orderId;
+        closeModal();
+        renderAll();
+        toggleCart(true);
+        toast('已載入原訂單內容，改好後按「前往填寫訂購資料」重新送出');
+      }));
+      $$('[data-cancel-order]', root).forEach((b) => b.addEventListener('click', () => {
+        cancelOrder(b.dataset.cancelOrder);
+      }));
     },
   });
 }
@@ -1043,6 +1090,7 @@ async function submitOrder(ev) {
         sets: setLines.join(' ｜ '), setsTotal: c.setsSubtotal,
         alacarte: alcLines.join('、'), alacarteTotal: c.alcSubtotal,
         service: c.service, total: c.total, note: values.note, ts: values.ts,
+        cart: JSON.stringify(S.cart),
       });
       delivered = true;
     } else {
@@ -1121,10 +1169,12 @@ function showSuccess(record, delivered) {
               : '訂單已送出到門市 Google 表單（修改會以新的一列記錄，門市取最新一筆）。'}
       </p>
       <div class="mt-4 flex flex-col gap-2">
-        <button id="btnGoOrders" class="w-full rounded-full bg-ink py-3 text-sm font-black text-white">查看我的訂單（可修改／取消）</button>
+        <button id="btnGoOrders" class="btn btn-solid w-full text-[11.5px]">查看我的訂單</button>
         <button data-close-modal class="w-full rounded-full bg-ink/5 py-3 text-sm font-bold">繼續點餐</button>
       </div>
-      <p class="mt-3 text-[11px] text-ink-mute">如需變更，請登入同一支手機號碼後於「我的訂單」修改，或${tel()}</p>
+      <p class="mt-3 text-[10px] leading-relaxed tracking-[.06em] text-ink-mute">
+        訂單已送出，內容如需更改請${tel('聯繫')}，由門市為您開啟修改。
+      </p>
     </div>`, {
     onMount: (root) => $('#btnGoOrders', root).addEventListener('click', () => { closeModal(); openMyOrders(); }),
   });
@@ -1145,54 +1195,21 @@ function loadOrderForEdit(orderId) {
 }
 
 async function cancelOrder(orderId) {
-  const o = S.orders.find((x) => x.orderId === orderId);
-  if (!o) return;
   if (!confirm(`確定要取消訂單 ${orderId} 嗎？`)) return;
-  const values = {
-    orderId, action: '取消訂單', name: o.name, phone: o.phone, pickup: o.pickup,
-    headcount: `${o.headcount} 人`, sets: o.summary, setsTotal: '', alacarte: '',
-    alacarteTotal: '', service: '', total: String(o.total), note: o.note || '無',
-    ts: new Date().toLocaleString('zh-TW', { hour12: false }),
-  };
-  let delivered = false;
-  const useApi = (CFG.ordersWrite && CFG.ordersWrite.mode === 'apps-script' && apiReady());
-
-  // 取消時把當初的金額一起送出去，避免試算表上的金額被清空
-  const savedCart = S.cart;
-  let money = { setsSubtotal: '', alcSubtotal: '', service: '', alcLines: [] };
   try {
-    if (o.cart) {
-      S.cart = JSON.parse(JSON.stringify(o.cart));
-      const cc = calc();
-      const sm = buildSummary();
-      money = { setsSubtotal: cc.setsSubtotal, alcSubtotal: cc.alcSubtotal, service: cc.service, alcLines: sm.alcLines };
-    }
-  } catch (e) { /* 舊資料沒有 cart 就只送金額以外的欄位 */ }
-  finally { S.cart = savedCart; }
-
-  try {
-    if (useApi) {
-      await postOrderToApi({
-        action: '取消', orderId, name: o.name, phone: o.phone,
-        code: o.code || (S.user && S.user.code) || '', pickup: o.pickup, headcount: o.headcount,
-        sets: o.summary, setsTotal: money.setsSubtotal,
-        alacarte: money.alcLines.join('、'), alacarteTotal: money.alcSubtotal,
-        service: money.service, total: o.total, note: o.note || '無', ts: values.ts,
-      });
-      delivered = true;
-    } else {
-      delivered = await postToGoogleForm(values);
-    }
+    await postOrderToApi({
+      action: '取消', orderId, name: S.user.name, phone: S.user.phone,
+      code: S.user.code || '', ts: new Date().toLocaleString('zh-TW', { hour12: false }),
+    });
   } catch (err) {
-    console.warn('取消訂單失敗', err);
-    return toast(`取消失敗：${err.message || '請稍後再試'}`, 4200);
+    return toast(`${err.message || '取消失敗'}`, 4200);
   }
-  o.status = '取消訂單';
-  o.ts = Date.now();
-  save(LS.orders, S.orders);
+  // 本機紀錄同步
+  const o = S.orders.find((x) => x.orderId === orderId);
+  if (o) { o.status = '取消訂單'; o.ts = Date.now(); save(LS.orders, S.orders); }
   closeModal();
   renderAll();
-  toast(delivered ? '已送出取消通知' : '已取消（示範模式，僅更新本機紀錄）');
+  toast('已送出取消通知');
 }
 
 /* ================================================================ 事件綁定 */

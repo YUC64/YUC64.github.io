@@ -226,7 +226,12 @@ body main article:hover { border-color: rgba(23,20,15,.3); transform: translateY
   100% { transform: translateX(108vw); }
 }
 
-.ele { width: 100%; height: 100%; color: rgba(255,255,255,.94); display: block; filter: drop-shadow(0 6px 18px rgba(0,0,0,.35)); }
+.ele {
+  width: 100%; height: 100%;
+  color: #A848E8;                       /* 品牌 Logo 的紫 */
+  display: block;
+  filter: drop-shadow(0 6px 16px rgba(0,0,0,.4)) drop-shadow(0 0 1px rgba(255,255,255,.55));
+}
 .ele-bob { animation: eleBob .46s ease-in-out infinite alternate; transform-origin: 50% 90%; }
 @keyframes eleBob {
   from { transform: translateY(0) rotate(-.6deg); }
@@ -277,15 +282,22 @@ img { -webkit-user-drag: none; }
 
 @media (max-width: 639px) { main { padding-bottom: 8rem; } }
 
-/* 減少動態偏好 */
+/* 減少動態偏好：保留「淡入」與緩慢的小象，只拿掉位移、推鏡與模糊 */
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: .001ms !important; animation-iteration-count: 1 !important;
-    transition-duration: .001ms !important;
-  }
   html { scroll-behavior: auto; }
-  .reveal { opacity: 1; transform: none; filter: none; }
-  .rise { opacity: 1; }
+
+  @keyframes fadeOnly { from { opacity: 0; } to { opacity: 1; } }
+  .rise { animation: fadeOnly .9s var(--ease) forwards !important; }
+
+  .kenburns { animation: none !important; transform: none !important; }
+  .reveal {
+    opacity: 1 !important; transform: none !important;
+    filter: none !important; transition: none !important;
+  }
+  .ele-run { animation-duration: 46s !important; }
+  .ele-bob, .ele .leg, .ele-ear, .ele-trunk, .ele-tail { animation: none !important; }
+  .dust { display: none; }
+  .nudge { animation: none !important; }
 }
 
 /* ========================================================= 頂部列（捲動轉紙色） */

@@ -1,12 +1,9 @@
 /**
- * 本機測試 Code.gs（用假的 SpreadsheetApp，模擬 Google 的儲存格行為）
+ * 本機測試 Code.gs（假 SpreadsheetApp，模擬 Google 儲存格行為）
  *   node scripts/test-codegs.mjs
- * 模擬重點：儲存格沒設文字格式時，"2027-02-06 11:30" 會被 Google 轉成 Date、
- *          "0937745327" 會被轉成數字 —— 這正是先前兩個 bug 的來源。
  */
 import fs from 'fs';
 
-/* ───────────────── 假試算表 ───────────────── */
 const COERCE_DATE = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/;
 
 class Sheet {
@@ -31,7 +28,7 @@ class Sheet {
     if (f === '@') return v == null ? '' : String(v);
     if (typeof v === 'string') {
       if (COERCE_DATE.test(v)) return new Date(v.replace(' ', 'T') + ':00+08:00');
-      if (/^\d{9,}$/.test(v)) return Number(v);           // 電話/純數字 → 數字
+      if (/^\d{9,}$/.test(v)) return Number(v);
     }
     return v == null ? '' : v;
   }
@@ -41,11 +38,7 @@ class Sheet {
   setColumnWidth() { return this; }
   insertRowBefore() { this.cells.unshift([]); return this; }
   setName(n) { this.name = n; return this; }
-  appendRow(vals) {
-    const r = this.getLastRow() + 1;
-    this.getRange(r, 1, 1, vals.length).setValues([vals]);
-    return this;
-  }
+  appendRow(vals) { const r = this.getLastRow() + 1; this.getRange(r, 1, 1, vals.length).setValues([vals]); return this; }
 }
 
 class Range {
@@ -65,9 +58,9 @@ class Range {
   getDisplayValues() {
     return this.getValues().map((row) => row.map((v) => {
       if (v instanceof Date) {
-        const d = v;
+        const d = new Date(v.getTime() + 8 * 3600e3);
         const p = (x) => (String(x).length < 2 ? '0' : '') + x;
-        return `${d.getUTCFullYear()}/${p(d.getUTCMonth() + 1)}/${p(d.getUTCDate())} 下午 ${d.getUTCHours() + 8 > 12 ? d.getUTCHours() + 8 - 12 : d.getUTCHours() + 8}:${p(d.getUTCMinutes())}:${p(d.getUTCSeconds())}`;
+        return `${d.getUTCFullYear()}/${p(d.getUTCMonth() + 1)}/${p(d.getUTCDate())} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`;
       }
       return v == null ? '' : String(v);
     }));
@@ -118,16 +111,10 @@ class Spreadsheet {
 
 const DBS = new Map();
 const openById = (id) => { if (!DBS.has(id)) DBS.set(id, new Spreadsheet(id)); return DBS.get(id); };
-
-/* ───────────────── 假 Apps Script 服務 ───────────────── */
 const props = new Map();
 const cache = new Map();
 const stubs = {
-  SpreadsheetApp: {
-    openById,
-    create: (name) => new Spreadsheet('NEW-' + name),
-    flush() {},
-  },
+  SpreadsheetApp: { openById, create: (name) => new Spreadsheet('NEW-' + name), flush() {} },
   PropertiesService: {
     getScriptProperties: () => ({
       getProperty: (k) => (props.has(k) ? props.get(k) : null),
@@ -144,15 +131,11 @@ const stubs = {
   },
   Utilities: {
     formatDate: (d, tz, fmt) => {
-      const iso = new Date(d.getTime() + 8 * 3600e3);   // 轉台北時間
+      const iso = new Date(d.getTime() + 8 * 3600e3);
       const p = (x) => (String(x).length < 2 ? '0' : '') + x;
-      return fmt
-        .replace('yyyy', iso.getUTCFullYear())
-        .replace('MM', p(iso.getUTCMonth() + 1))
-        .replace('dd', p(iso.getUTCDate()))
-        .replace('HH', p(iso.getUTCHours()))
-        .replace('mm', p(iso.getUTCMinutes()))
-        .replace('ss', p(iso.getUTCSeconds()));
+      return fmt.replace('yyyy', iso.getUTCFullYear()).replace('MM', p(iso.getUTCMonth() + 1))
+        .replace('dd', p(iso.getUTCDate())).replace('HH', p(iso.getUTCHours()))
+        .replace('mm', p(iso.getUTCMinutes())).replace('ss', p(iso.getUTCSeconds()));
     },
   },
   ContentService: {
@@ -162,15 +145,12 @@ const stubs = {
   Logger: { log: (...a) => console.log('  [Logger]', ...a) },
 };
 
-/* ───────────────── 載入 Code.gs ───────────────── */
 const src = fs.readFileSync(new URL('../scripts/google-apps-script/Code.gs', import.meta.url), 'utf8');
-const factory = new Function(...Object.keys(stubs), src + `
-  return { doGet, doPost, staffOrders_, setupOrderSheet, tidyOrderSheet_, orderSheet_, pickupStr_,
-           ORDER_TAB, ARCHIVE_TAB, RESERVATION_SHEET_ID, ORDER_SHEET_ID_FIXED };
-`);
-const G = factory(...Object.values(stubs));
+const G = new Function(...Object.keys(stubs), src + `
+  return { doGet, doPost, staffOrders_, setupOrderSheet, tidyOrderSheet_, orderSheet_,
+           ORDER_TAB, ARCHIVE_TAB, RESERVATION_SHEET_ID, ORDER_SHEET_ID_FIXED, COL_FLAG };
+`)(...Object.values(stubs));
 
-/* ───────────────── 準備資料 ───────────────── */
 let pass = 0, fail = 0;
 const ok = (cond, msg, extra) => {
   if (cond) { pass++; console.log('  ✅', msg); }
@@ -179,84 +159,93 @@ const ok = (cond, msg, extra) => {
 const callPost = (body) => JSON.parse(G.doPost({ postData: { contents: JSON.stringify(body) } }).getContent());
 const callGet = (params) => JSON.parse(G.doGet({ parameter: params }).getContent());
 
-// 訂位表
-const res = openById(G.RESERVATION_SHEET_ID);
-const rs = res.insertSheet('訂位名單');
+const rs = openById(G.RESERVATION_SHEET_ID).insertSheet('訂位名單');
 rs.getRange(1, 1, 1, 3).setValues([['姓名', '電話', '驗證碼']]);
 rs.getRange('B2:B').setNumberFormat('@');
 rs.getRange('C2:C').setNumberFormat('@');
-rs.getRange(2, 1, 1, 3).setValues([['謝寓臣', '0937745327', '1020']]);
+rs.getRange(2, 1, 2, 3).setValues([['謝寓臣', '0937745327', '1020'], ['陳大文', '0911222333', '5678']]);
 
-// 訂單表
 const ord = openById(G.ORDER_SHEET_ID_FIXED);
 G.setupOrderSheet([]);
 
-/* ───────────────── 測試開始 ───────────────── */
-const base = (o) => Object.assign({
+const A = (o) => Object.assign({
   name: '謝寓臣', phone: '0937745327', code: '1020', headcount: 6,
-  sets: '六人套餐', setsTotal: 5280, alacarte: '泰式奶茶（熱）x2', alacarteTotal: 260,
-  service: 554, note: '測試', ts: '2026-10-24 15:00:00',
+  sets: '春節六人套餐 ×1\n　涼拌：酸辣海鮮涼拌', setsTotal: 5280,
+  alacarte: '泰式奶茶（熱）x2', alacarteTotal: 260,
+  service: 554, note: '', ts: '2026-10-24 15:00:00',
+}, o);
+const B = (o) => Object.assign({
+  name: '陳大文', phone: '0911222333', code: '5678', headcount: 4,
+  sets: '春節四人套餐 ×1', setsTotal: 3280,
+  alacarte: '', alacarteTotal: 0, service: 328, note: '', ts: '2026-10-24 15:05:00',
 }, o);
 
 console.log('\n① 登入驗證');
 ok(callGet({ phone: '0937745327', code: '1020' }).ok === true, '正確驗證碼可登入');
 ok(callGet({ phone: '0937745327', code: '0000' }).error === 'bad_code', '錯驗證碼被擋');
 
-console.log('\n② 新增兩張單（先晚後早，驗證自動排序）');
-const r1 = callPost(base({ action: '新增', orderId: 'T-B', pickup: '2027-02-06 18:30', total: 6094 }));
-ok(r1.ok && r1.mode === 'created', '建立 18:30 的單', r1);
-const r2 = callPost(base({ action: '新增', orderId: 'T-A', pickup: '2027-02-06 11:30', total: 6094 }));
-ok(r2.ok && r2.mode === 'created', '建立 11:30 的單', r2);
-
+console.log('\n② 兩位客人各下一張');
+ok(callPost(A({ action: '新增', orderId: 'T-A', total: 6094 })).ok, '謝寓臣 下單成功');
+ok(callPost(B({ action: '新增', orderId: 'T-B', total: 3608 })).ok, '陳大文 下單成功');
 let main = ord.getSheetByName(G.ORDER_TAB);
 let ids = main.getRange(2, 1, main.getLastRow() - 1, 1).getValues().map((r) => r[0]);
-ok(JSON.stringify(ids) === JSON.stringify(['T-A', 'T-B']), '主表依取餐時間排序（T-A 在前）', ids);
+ok(JSON.stringify(ids) === JSON.stringify(['T-A', 'T-B']), '依訂單編號（下單順序）排序', ids);
 
-const pickupCell = main.getRange(2, 6).getValue();
-ok(typeof pickupCell === 'string' && pickupCell === '2027-02-06 11:30', '取餐時間存成文字（不是 Date）', String(pickupCell));
-const phoneCell = main.getRange(2, 5).getValue();
-ok(phoneCell === '0937745327', '電話保留前導 0', String(phoneCell));
+console.log('\n③ 每人只能送一次');
+const dup = callPost(A({ action: '新增', orderId: 'T-DUP', total: 1000 }));
+ok(dup.error === 'already_ordered', '同一位客人再送 → already_ordered', dup);
 
-console.log('\n③ 取消 T-A → 應搬到「已取消」分頁');
-const r3 = callPost(base({ action: '取消', orderId: 'T-A', pickup: '2027-02-06 11:30', total: 6094,
-  setsTotal: '', alacarte: '', alacarteTotal: '', service: '' }));
-ok(r3.ok && r3.status === '已取消', '取消成功', r3);
+console.log('\n④ 未開放前不能改單／取消');
+ok(callPost(A({ action: '修改', orderId: 'T-A', total: 7000 })).error === 'edit_locked', '改單 → edit_locked');
+ok(callPost(B({ action: '取消', orderId: 'T-B' })).error === 'edit_locked', '取消 → edit_locked');
 
+console.log('\n⑤ 員工開放修改權限');
+ok(callPost({ action: '開放修改', orderId: 'T-A', staffPw: '0000' }).error === 'bad_password', '員工密碼錯 → 擋下');
+const open1 = callPost({ action: '開放修改', orderId: 'T-A', staffPw: '8888' });
+ok(open1.ok && open1.editable === true, '開放成功', open1);
+const mine1 = callGet({ mine: '1', phone: '0937745327', code: '1020' });
+ok(mine1.ok && mine1.orders.length === 1, '客人只看到自己的 1 筆', mine1.count);
+ok(mine1.orders[0].editable === true, '客人看到「可修改」');
+ok(callGet({ mine: '1', phone: '0937745327', code: '9999' }).error === 'bad_code', '他人無法用錯驗證碼查詢');
+
+console.log('\n⑥ 客人改單（限一次）');
+const mod = callPost(A({ action: '修改', orderId: 'T-A', total: 7000, note: '改成 7000' }));
+ok(mod.ok && mod.mode === 'updated', '開放後可改單', mod);
+main = ord.getSheetByName(G.ORDER_TAB);
+ok(main.getLastRow() === 3, '沒有新增列（主表 2 筆）', main.getLastRow());
+ok(Number(main.getRange(2, 13).getValue()) === 7000, '金額已更新', main.getRange(2, 13).getValue());
+ok(String(main.getRange(2, G.COL_FLAG + 1).getValue() || '') === '', '改完自動收回權限');
+ok(callPost(A({ action: '修改', orderId: 'T-A', total: 8000 })).error === 'edit_locked', '第二次改單被擋');
+
+console.log('\n⑦ 取消（需權限）');
+callPost({ action: '開放修改', orderId: 'T-B', staffPw: '8888' });
+const cancelOk = callPost(B({ action: '取消', orderId: 'T-B', setsTotal: '', alacarte: '', alacarteTotal: '', service: '' }));
+ok(cancelOk.ok && cancelOk.status === '已取消', '開放後可取消', cancelOk);
 main = ord.getSheetByName(G.ORDER_TAB);
 ids = main.getLastRow() > 1 ? main.getRange(2, 1, main.getLastRow() - 1, 1).getValues().map((r) => r[0]) : [];
-ok(ids.length === 1 && ids[0] === 'T-B', '主表只剩 T-B（取消的自動搬走）', ids);
-
+ok(!ids.includes('T-B'), '取消的單已離開主表', ids);
 const arc = ord.getSheetByName(G.ARCHIVE_TAB);
 const arcIds = arc && arc.getLastRow() > 1 ? arc.getRange(2, 1, arc.getLastRow() - 1, 1).getValues().map((r) => r[0]) : [];
-ok(arcIds.length === 1 && arcIds[0] === 'T-A', '「已取消」分頁有 T-A', arcIds);
-const arcMoney = arc.getRange(2, 9).getValue();
-ok(Number(arcMoney) === 5280, '取消後套餐金額仍保留（5280）', arcMoney);
+ok(arcIds.includes('T-B'), '「已取消」分頁有 T-B', arcIds);
+ok(Number(arc.getRange(2, 9).getValue()) === 3280, '取消後套餐金額保留', arc.getRange(2, 9).getValue());
 
-console.log('\n④ 員工 API');
-const api = callGet({ staff: '1', pw: '8888' });
-ok(api.ok === true, '密碼正確可讀取', api.error);
-ok(api.count === 2, '回傳 2 筆（主表 1 + 已取消 1）', api.count);
-const a = api.orders.find((o) => o.orderId === 'T-A');
-const b = api.orders.find((o) => o.orderId === 'T-B');
-ok(a && a.src === G.ARCHIVE_TAB, 'T-A 來自「已取消」分頁', a && a.src);
-ok(b && b.src === G.ORDER_TAB, 'T-B 來自「訂單」分頁', b && b.src);
-ok(a && a.pickup === '2027-02-06 11:30', 'API 取餐時間是乾淨字串', a && a.pickup);
-ok(a && a.phone === '0937745327', 'API 電話保留前導 0', a && a.phone);
-ok(callGet({ staff: '1', pw: '0000' }).error === 'bad_password', '錯密碼被擋');
+console.log('\n⑧ 取消後可以重新下單');
+ok(callPost(B({ action: '新增', orderId: 'T-B2', total: 3000 })).ok, '原單取消後可再下單');
 
-console.log('\n⑤ 修改 T-B（同編號覆蓋，不新增列）');
-const r4 = callPost(base({ action: '修改', orderId: 'T-B', pickup: '2027-02-06 12:30', total: 7000 }));
-ok(r4.ok && r4.mode === 'updated', '改單回 updated', r4);
-main = ord.getSheetByName(G.ORDER_TAB);
-ok(main.getLastRow() === 2, '主表仍只有 1 筆資料列（沒有重複）', main.getLastRow());
-ok(main.getRange(2, 6).getValue() === '2027-02-06 12:30', '取餐時間已更新', main.getRange(2, 6).getValue());
-ok(Number(main.getRange(2, 13).getValue()) === 7000, '金額已更新', main.getRange(2, 13).getValue());
+console.log('\n⑨ 員工看板資料');
+const staff = callGet({ staff: '1', pw: '8888' });
+ok(staff.ok === true, '員工可讀取', staff.error);
+ok(staff.orders.length >= 3, '含主表與已取消分頁', staff.count);
+const aStaff = staff.orders.find((o) => o.orderId === 'T-A');
+ok(aStaff && aStaff.editable === false, '權限收回後看板顯示不可修改');
+ok(typeof staff.orders[0].pickup === 'string', 'pickup 仍是乾淨字串（不再使用）');
+ok(callGet({ staff: '1', pw: '0000' }).error === 'bad_password', '員工密碼錯被擋');
 
-console.log('\n⑥ 再新增一張更早的單，確認重新排序');
-callPost(base({ action: '新增', orderId: 'T-C', pickup: '2027-02-05 19:00', total: 5000 }));
-main = ord.getSheetByName(G.ORDER_TAB);
-ids = main.getRange(2, 1, main.getLastRow() - 1, 1).getValues().map((r) => r[0]);
-ok(JSON.stringify(ids) === JSON.stringify(['T-C', 'T-B']), 'T-C（2/5）排到最前', ids);
+console.log('\n⑩ 格式檢查');
+const phoneCell = main.getRange(2, 5).getValue();
+ok(phoneCell === '0937745327', '電話保留前導 0', String(phoneCell));
+const aMine2 = callGet({ mine: '1', phone: '0937745327', code: '1020' }).orders[0];
+ok(typeof aMine2.updated === 'string' && aMine2.updated.indexOf('/') > 0, 'updated 是乾淨字串', aMine2.updated);
 
 console.log(`\n結果：${pass} 通過、${fail} 失敗`);
 process.exit(fail ? 1 : 0);

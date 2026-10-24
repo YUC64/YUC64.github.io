@@ -39,7 +39,7 @@
   .row.open { border-color: var(--ink); }
   .row-grid { display: grid; grid-template-columns: 1fr; gap: .5rem; }
   @media (min-width: 900px) {
-    .row-grid { grid-template-columns: 150px 1fr 150px 110px 110px 110px 90px; align-items: center; gap: 1rem; }
+    .row-grid { grid-template-columns: 150px 1fr 100px 110px 110px 90px; align-items: center; gap: 1rem; }
   }
   .muted { color: var(--mute); }
   .mono { font-variant-numeric: tabular-nums; letter-spacing: .02em; }
@@ -119,8 +119,8 @@
         <input id="search" type="search" placeholder="搜尋姓名／電話／訂單編號"
                class="field w-full sm:w-64" style="padding:.45rem 0;font-size:11.5px">
         <select id="sortBy" class="field w-auto shrink-0 cursor-pointer" style="padding:.45rem 1.2rem .45rem 0;font-size:11.5px">
-          <option value="pickup">依取餐時間</option>
           <option value="recent">最新送出</option>
+          <option value="oldest">最早送出</option>
         </select>
         <label class="flex shrink-0 items-center gap-1.5 text-[10px] tracking-[.1em] text-ink-mute">
           <input id="autoRefresh" type="checkbox" checked class="h-3.5 w-3.5 accent-[#17140F]"> 自動
@@ -141,7 +141,7 @@
     <!-- 表頭（桌機） -->
     <div id="listHead" class="list-head mt-4 px-4 pb-2 text-[9.5px] tracking-[.22em] text-ink-mute">
       <div class="row-grid">
-        <span>訂單編號</span><span>客人</span><span>取餐時間</span><span>人數</span><span>金額</span><span>狀態</span><span>更新</span>
+        <span>訂單編號</span><span>客人</span><span>人數</span><span>金額</span><span>狀態</span><span>更新</span>
       </div>
     </div>
 
