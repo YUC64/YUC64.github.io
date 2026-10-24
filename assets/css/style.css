@@ -1,77 +1,338 @@
 /* =============================================================================
- *  饗泰多 2027 春節預訂 — 自訂樣式（搭配 Tailwind CDN）
+ *  饗泰多 SIAM MORE — 2027 除夕預點餐
+ *  設計語彙：暖象牙紙 × 墨黑 × 細金線 ／ 襯線標題 ／ 髮絲線 ／ 慢速緩動
  * ========================================================================== */
 
 :root {
-  --brand: #FFD400;
-  --ink: #141414;
+  --paper:      #FAF7F2;
+  --paper-2:    #F2ECE2;
+  --ink:        #17140F;
+  --ink-soft:   #3B362E;
+  --mute:       #7C7469;
+  --line:       rgba(23, 20, 15, .13);
+  --line-soft:  rgba(23, 20, 15, .07);
+  --gold:       #A67C52;
+  --gold-soft:  #C9A87C;
+  --brand:      #FFD400;
+  --ease:       cubic-bezier(.16, 1, .3, 1);
+  --ease-soft:  cubic-bezier(.4, 0, .2, 1);
 }
 
 html { scroll-behavior: smooth; }
-
-body { -webkit-tap-highlight-color: transparent; }
-
-/* 隱藏橫向捲動條（分類頁籤） */
-.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-.no-scrollbar::-webkit-scrollbar { display: none; }
-
-/* 卡片進場 */
-.card-enter { animation: cardIn .28s ease both; }
-@keyframes cardIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: none; }
+body {
+  -webkit-tap-highlight-color: transparent;
+  background-color: var(--paper);
+  /* 極淡的紙紋，讓大面積底色不至於死板 */
+  background-image: radial-gradient(rgba(23,20,15,.028) 1px, transparent 1px);
+  background-size: 3px 3px;
 }
 
-/* 購物車面板 */
-#cartPanel.open { transform: translateX(0); }
+::selection { background: rgba(166,124,82,.22); }
+
+/* 字體語彙 ------------------------------------------------------------------ */
+.serif { font-family: "Noto Serif TC", ui-serif, Georgia, serif; font-weight: 400; }
+.caps  {
+  font-size: 10px; letter-spacing: .34em; text-transform: uppercase;
+  font-weight: 500; color: var(--gold);
+}
+.num   { font-family: "Noto Serif TC", ui-serif, Georgia, serif; font-variant-numeric: tabular-nums; }
+
+/* 髮絲線 */
+.hairline { height: 1px; background: var(--line); border: 0; }
+.hairline-soft { height: 1px; background: var(--line-soft); border: 0; }
+
+/* 按鈕 ---------------------------------------------------------------------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .6rem;
+  border-radius: 2px; padding: .95rem 2rem;
+  font-size: 13px; font-weight: 500; letter-spacing: .16em;
+  cursor: pointer; user-select: none;
+  transition: background-color .45s var(--ease), color .45s var(--ease),
+              border-color .45s var(--ease), transform .35s var(--ease),
+              letter-spacing .45s var(--ease);
+}
+.btn:active { transform: scale(.985); }
+.btn-solid { background: var(--ink); color: #fff; border: 1px solid var(--ink); }
+.btn-solid:hover { background: #000; letter-spacing: .2em; }
+.btn-line { background: transparent; color: var(--ink); border: 1px solid rgba(23,20,15,.28); }
+.btn-line:hover { background: var(--ink); color: #fff; border-color: var(--ink); letter-spacing: .2em; }
+.btn-on-dark { background: transparent; color: rgba(255,255,255,.92); border: 1px solid rgba(255,255,255,.34); }
+.btn-on-dark:hover { background: rgba(255,255,255,.96); color: var(--ink); border-color: #fff; letter-spacing: .2em; }
+.btn-light { background: #fff; color: var(--ink); border: 1px solid #fff; }
+.btn-light:hover { background: transparent; color: #fff; letter-spacing: .2em; }
+.btn[disabled], .btn.is-disabled { opacity: .38; cursor: not-allowed; }
+.btn[disabled]:hover, .btn.is-disabled:hover { letter-spacing: .16em; }
+
+/* 純文字連結（細底線滑入） */
+.link-u { position: relative; letter-spacing: .14em; }
+.link-u::after {
+  content: ""; position: absolute; left: 0; bottom: -3px; height: 1px; width: 0;
+  background: currentColor; transition: width .5s var(--ease);
+}
+.link-u:hover::after { width: 100%; }
+
+/* 卡片 / 影像 ---------------------------------------------------------------- */
+.media { position: relative; overflow: hidden; background: var(--paper-2); }
+.media img {
+  transition: transform 1.4s var(--ease), filter 1.4s var(--ease);
+  transform: scale(1.001);
+}
+.group:hover .media img, article:hover .media img { transform: scale(1.045); }
+.media::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(180deg, rgba(23,20,15,0) 58%, rgba(23,20,15,.32) 100%);
+  opacity: .85; transition: opacity .9s var(--ease);
+}
+article:hover .media::after { opacity: .6; }
+
+/* app.js 產生的卡片 */
+body main article {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  box-shadow: none;
+  transition: border-color .6s var(--ease), transform .6s var(--ease);
+}
+body main article:hover { border-color: rgba(23,20,15,.3); transform: translateY(-2px); }
 
 /* 數量控制器 */
 .qty-btn {
   display: grid; place-items: center;
-  width: 30px; height: 30px; border-radius: 9999px;
-  font-weight: 900; line-height: 1;
-  background: #141414; color: #fff;
-  transition: transform .12s ease, background .15s ease;
+  width: 30px; height: 30px; border-radius: 2px;
+  font-size: 15px; font-weight: 400; line-height: 1;
+  color: var(--ink); background: transparent;
+  border: 1px solid var(--line);
+  transition: background-color .3s var(--ease), color .3s var(--ease), border-color .3s var(--ease), transform .2s var(--ease);
 }
-.qty-btn:hover { background: #000; }
-.qty-btn:active { transform: scale(.9); }
-.qty-btn[disabled] { background: #D9D9D9; color: #8A8A8A; cursor: not-allowed; }
+.qty-btn:hover { background: var(--ink); color: #fff; border-color: var(--ink); }
+.qty-btn:active { transform: scale(.92); }
+.qty-btn[disabled] { opacity: .3; cursor: not-allowed; }
 
 /* 選項晶片 */
 .chip {
-  display: inline-flex; align-items: center; gap: .35rem;
-  border: 1.5px solid rgba(20,20,20,.14); background: #fff;
-  border-radius: 9999px; padding: .34rem .7rem;
-  font-size: .8rem; font-weight: 700; cursor: pointer;
-  transition: all .15s ease;
+  display: inline-flex; align-items: center; gap: .4rem;
+  border: 1px solid var(--line); background: transparent; color: var(--ink-soft);
+  border-radius: 2px; padding: .45rem .8rem;
+  font-size: .8rem; font-weight: 400; cursor: pointer;
+  transition: all .35s var(--ease);
 }
-.chip:hover { border-color: #141414; }
-.chip.on { background: var(--ink); border-color: var(--ink); color: #fff; }
-.chip.on::before { content: "✓"; font-size: .72rem; }
-.chip.dim { opacity: .45; }
+.chip:hover { border-color: rgba(23,20,15,.42); color: var(--ink); }
+.chip.on { background: var(--ink); border-color: var(--ink); color: #fff; font-weight: 500; }
+.chip.on::before { content: "✓"; font-size: .7rem; }
+.chip.dim { opacity: .32; }
 
 /* 套餐選配區塊 */
-.group-box { border-radius: 14px; background: #F7F4EC; padding: .7rem .8rem; }
+.group-box {
+  border-radius: 2px; background: var(--paper-2);
+  border: 1px solid transparent; padding: .85rem .9rem;
+  transition: border-color .4s var(--ease), background-color .4s var(--ease);
+}
 .group-box .group-head { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
-.group-box.bad { background: #FDECEA; outline: 1.5px solid #D8372C; }
+.group-box.bad { background: #FBEDEB; border-color: rgba(216,55,44,.35); }
 
-/* 圖片缺失時的浮水印替代 */
-.img-fallback {
-  background:
-    radial-gradient(circle at 30% 20%, rgba(255,212,0,.85), rgba(255,212,0,0) 60%),
-    linear-gradient(135deg, #2B2B2B 0%, #4A4A4A 100%);
-  color: #FFD400;
+/* 分類頁籤（底線式） */
+.tab {
+  position: relative; padding: .55rem .1rem; margin-right: 1.5rem;
+  font-size: 12.5px; letter-spacing: .1em; color: var(--mute);
+  white-space: nowrap; cursor: pointer; transition: color .4s var(--ease);
+  background: none; border: 0;
+}
+.tab::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 1px;
+  background: var(--ink); transform: scaleX(0); transform-origin: left;
+  transition: transform .5s var(--ease);
+}
+.tab:hover { color: var(--ink); }
+.tab.on { color: var(--ink); font-weight: 500; }
+.tab.on::after { transform: scaleX(1); }
+
+/* 表單欄位 */
+.field {
+  width: 100%; background: transparent;
+  border: 0; border-bottom: 1px solid var(--line); border-radius: 0;
+  padding: .7rem 0; font-size: 14px; color: var(--ink);
+  transition: border-color .4s var(--ease);
+}
+.field::placeholder { color: rgba(124,116,105,.6); }
+.field:focus { outline: none; border-color: var(--ink); }
+.field-label {
+  display: block; font-size: 10px; letter-spacing: .3em;
+  color: var(--gold); margin-bottom: .1rem;
 }
 
-/* 成功打勾動畫 */
-.tick { animation: pop .4s cubic-bezier(.2,1.4,.5,1) both; }
+/* 面板 */
+#cartPanel, #drawer { transition: transform .62s var(--ease); }
+#cartPanel.open { transform: translateX(0); }
+#modal { transition: opacity .35s var(--ease); }
+
+/* 隱藏橫向捲動條 */
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* 圖片缺失時的替代 */
+.img-fallback {
+  background:
+    radial-gradient(circle at 30% 20%, rgba(255,212,0,.5), rgba(255,212,0,0) 62%),
+    linear-gradient(135deg, #2B2B2B 0%, #4A4A4A 100%);
+  color: rgba(255,255,255,.55);
+}
+
+/* 成功打勾 */
+.tick { animation: pop .5s cubic-bezier(.2,1.4,.5,1) both; }
 @keyframes pop { from { transform: scale(.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
-/* 固定底部列存在時的最後一段留白 */
-@media (max-width: 639px) { main { padding-bottom: 7rem; } }
+/* =============================================================== 動畫：進場 */
+.reveal {
+  opacity: 0; transform: translateY(26px); filter: blur(4px);
+  transition: opacity 1s var(--ease), transform 1s var(--ease), filter 1s var(--ease);
+  transition-delay: var(--d, 0ms);
+  will-change: opacity, transform;
+}
+.reveal.in { opacity: 1; transform: none; filter: blur(0); }
+
+/* 封面文字序列（載入即播） */
+@keyframes riseIn {
+  from { opacity: 0; transform: translateY(26px); filter: blur(6px); }
+  to   { opacity: 1; transform: none; filter: blur(0); }
+}
+.rise { opacity: 0; animation: riseIn 1.15s var(--ease) forwards; animation-delay: var(--d, 0ms); }
+
+@keyframes lineGrow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.rule-grow { transform-origin: center; animation: lineGrow 1.4s var(--ease) forwards; animation-delay: var(--d, 0ms); }
+
+/* 慢速呼吸（封面背景） */
+@keyframes kenburns {
+  from { transform: scale(1.02) translate3d(0,0,0); }
+  to   { transform: scale(1.10) translate3d(0,-1.2%,0); }
+}
+.kenburns { animation: kenburns 26s ease-in-out infinite alternate; }
+
+/* 向下捲動提示 */
+@keyframes nudge { 0%,100% { transform: translateY(0); opacity: .45; } 50% { transform: translateY(5px); opacity: 1; } }
+.nudge { animation: nudge 2.4s ease-in-out infinite; }
+
+/* ========================================================= 小象在跑步（SVG） */
+.ele-stage {
+  position: absolute; left: 0; right: 0; bottom: 7.5%;
+  height: 104px; pointer-events: none; overflow: hidden;
+}
+.ele-run {
+  position: absolute; bottom: 0; left: 0;
+  width: 132px; height: 92px;
+  animation: eleRun 23s linear infinite;
+}
+@keyframes eleRun {
+  0%   { transform: translateX(-18vw); }
+  100% { transform: translateX(108vw); }
+}
+
+.ele { width: 100%; height: 100%; color: rgba(255,255,255,.94); display: block; filter: drop-shadow(0 6px 18px rgba(0,0,0,.35)); }
+.ele-bob { animation: eleBob .46s ease-in-out infinite alternate; transform-origin: 50% 90%; }
+@keyframes eleBob {
+  from { transform: translateY(0) rotate(-.6deg); }
+  to   { transform: translateY(-3.2px) rotate(.6deg); }
+}
+
+.ele .leg { transform-box: fill-box; transform-origin: 50% 0%; }
+.ele .leg-a { animation: legSwing .46s ease-in-out infinite alternate; }
+.ele .leg-b { animation: legSwing .46s ease-in-out infinite alternate-reverse; }
+.ele .leg-c { animation: legSwing .46s ease-in-out infinite alternate-reverse; }
+.ele .leg-d { animation: legSwing .46s ease-in-out infinite alternate; }
+@keyframes legSwing { from { transform: rotate(-24deg); } to { transform: rotate(24deg); } }
+
+.ele-ear { transform-box: fill-box; transform-origin: 20% 30%; animation: earFlap .46s ease-in-out infinite alternate; }
+@keyframes earFlap { from { transform: rotate(-7deg); } to { transform: rotate(6deg); } }
+
+.ele-trunk { transform-box: fill-box; transform-origin: 0% 0%; animation: trunkSway 1.15s ease-in-out infinite alternate; }
+@keyframes trunkSway { from { transform: rotate(-6deg); } to { transform: rotate(7deg); } }
+
+.ele-tail { transform-box: fill-box; transform-origin: 100% 0%; animation: tailWag .5s ease-in-out infinite alternate; }
+@keyframes tailWag { from { transform: rotate(-14deg); } to { transform: rotate(10deg); } }
+
+/* 揚起的沙塵 */
+.dust { position: absolute; bottom: 2px; left: 0; width: 112px; height: 22px; }
+.dust i {
+  position: absolute; bottom: 0; width: 5px; height: 5px; border-radius: 50%;
+  background: rgba(255,255,255,.4); opacity: 0;
+  animation: dustPuff 1.5s linear infinite;
+}
+.dust i:nth-child(1) { left: 6px;  animation-delay: .1s; }
+.dust i:nth-child(2) { left: 14px; animation-delay: .55s; }
+.dust i:nth-child(3) { left: 22px; animation-delay: 1s; }
+@keyframes dustPuff {
+  0%   { opacity: 0; transform: translate(0,0) scale(.4); }
+  25%  { opacity: .5; }
+  100% { opacity: 0; transform: translate(-26px,-16px) scale(1.5); }
+}
+
+/* 手機版：小象縮小、跑慢一點 */
+@media (max-width: 640px) {
+  .ele-stage { bottom: 5%; height: 74px; }
+  .ele-run { width: 96px; height: 67px; animation-duration: 27s; }
+  .dust { width: 96px; }
+}
+
+/* ================================================================ 其他 */
+img { -webkit-user-drag: none; }
+
+@media (max-width: 639px) { main { padding-bottom: 8rem; } }
 
 /* 減少動態偏好 */
 @media (prefers-reduced-motion: reduce) {
-  * { animation: none !important; transition: none !important; }
+  *, *::before, *::after {
+    animation-duration: .001ms !important; animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+  }
   html { scroll-behavior: auto; }
+  .reveal { opacity: 1; transform: none; filter: none; }
+  .rise { opacity: 1; }
 }
+
+/* ========================================================= 頂部列（捲動轉紙色） */
+#siteHeader {
+  border-bottom: 1px solid transparent;
+  transition: background-color .7s var(--ease), border-color .7s var(--ease);
+}
+#siteHeader.is-solid {
+  background: rgba(250,247,242,.93);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  border-bottom-color: var(--line);
+}
+#siteHeader.is-solid .logo-ink { opacity: 1; }
+#siteHeader.is-solid .logo-white { opacity: 0; }
+.nav-link { color: rgba(255,255,255,.9); transition: color .5s var(--ease), letter-spacing .5s var(--ease); }
+.nav-link:hover { color: #fff; }
+.icon-btn { color: rgba(255,255,255,.9); transition: color .5s var(--ease), transform .4s var(--ease); }
+.icon-btn:hover { transform: scale(1.08); }
+#siteHeader.is-solid .nav-link, #siteHeader.is-solid .icon-btn { color: var(--ink); }
+#siteHeader.is-solid #cartCountTop { background: var(--ink); color: #fff; }
+
+/* ==================================================================== Toast / Modal */
+#toast { opacity: 0; transition: opacity .42s var(--ease); }
+#modalBox { animation: modalIn .5s var(--ease) both; }
+@keyframes modalIn {
+  from { opacity: 0; transform: translateY(16px) scale(.998); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ============================ 面板內既有元素統一成髮絲線／直角，去掉圓滾滾的舊樣式 */
+#drawerBody [class*="rounded-"], #cartBody [class*="rounded-"],
+#cartFoot [class*="rounded-"], #modalBox [class*="rounded-"] { border-radius: 2px; }
+#drawerBody [class*="shadow-"], #cartBody [class*="shadow-"] { box-shadow: none; }
+#drawerBody .bg-siam-purple { background: var(--ink); }
+
+/* 分類頁籤在手機上不擠 */
+@media (max-width: 640px) { .tab { margin-right: 1.15rem; font-size: 12px; } }
+
+/* 右上角操作區：在亮色照片上也看得清楚 */
+.header-actions {
+  background: rgba(23, 20, 15, .34);
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  padding: .5rem .9rem;
+  border-radius: 2px;
+  transition: background-color .7s var(--ease);
+}
+#siteHeader.is-solid .header-actions { background: transparent; padding: .5rem .9rem; }
+
+/* 封面照片：略微收斂飽和度，質感更沉穩 */
+.kenburns { filter: saturate(.9) contrast(1.04) brightness(.97); }

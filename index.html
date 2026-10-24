@@ -3,188 +3,231 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>饗泰多 SIAM MORE｜除夕線上預點餐</title>
-<meta name="description" content="饗泰多 2027 春節除夕線上預點餐：訂位客人用手機號碼＋驗證碼登入，先選春節多人套餐再加點單點菜色。">
-<meta name="theme-color" content="#141414">
+<title>饗泰多 SIAM MORE｜2027 除夕線上預點餐</title>
+<meta name="description" content="饗泰多 2027 春節除夕線上預點餐：訂位客人以手機號碼與驗證碼登入，先選春節多人套餐，再依喜好加點。">
+<meta name="theme-color" content="#17140F">
 <link rel="icon" type="image/png" href="assets/img/favicon.png">
 <link rel="apple-touch-icon" href="assets/img/favicon.png">
 
-<!-- Tailwind CSS（CDN） -->
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500&family=Noto+Serif+TC:wght@300;400;600&display=swap" rel="stylesheet">
 <script>
   tailwind.config = {
     theme: {
       extend: {
         colors: {
+          paper:   { DEFAULT: '#FAF7F2', 2: '#F2ECE2' },
+          ink:     { DEFAULT: '#17140F', soft: '#3B362E', mute: '#7C7469' },
+          gold:    { DEFAULT: '#A67C52', soft: '#C9A87C' },
           brand:   { DEFAULT: '#FFD400', dark: '#F2C200', deep: '#E0A800' },
-          ink:     { DEFAULT: '#141414', soft: '#2B2B2B', mute: '#6B6B6B' },
-          thai:    { red: '#D8372C', green: '#1F7A4D' },
-          siam:    { purple: '#AB4BE8', dark: '#8A2FD0' },
+          thai:    { red: '#B23A31', green: '#2C6E52' },
         },
-        fontFamily: { sans: ['"Noto Sans TC"', 'system-ui', 'sans-serif'] },
-        boxShadow: { card: '0 6px 24px -8px rgba(20,20,20,.18)', pop: '0 18px 60px -20px rgba(20,20,20,.45)' },
+        fontFamily: {
+          sans:  ['"Noto Sans TC"', 'system-ui', 'sans-serif'],
+          serif: ['"Noto Serif TC"', 'ui-serif', 'Georgia', 'serif'],
+        },
       },
     },
   };
 </script>
 <link rel="stylesheet" href="assets/css/style.css">
 </head>
-<body class="bg-[#FFFBF0] text-ink font-sans antialiased">
+<body id="top" class="font-sans text-ink antialiased">
 
-<!-- ============================ 頂部（只有 LOGO／購物車／三條線） ============================ -->
-<header class="sticky top-0 z-40 bg-ink/95 text-white backdrop-blur">
-  <div class="mx-auto flex max-w-6xl items-center gap-3 px-4 py-2.5">
-    <a href="#" class="flex shrink-0 items-center" aria-label="回首頁">
-      <img src="assets/img/logo-white.png" alt="饗泰多 SIAM MORE" class="h-8 w-auto sm:h-9"
-           onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'饗泰多',className:'text-lg font-black'}))">
+<!-- ══════════════════════════════ 頂部（浮在封面上，捲動後轉為紙色） ══════════════════════════════ -->
+<header id="siteHeader" class="fixed inset-x-0 top-0 z-40">
+  <div class="mx-auto flex max-w-[1200px] items-center justify-between px-5 py-4 sm:px-8 sm:py-5">
+    <a href="#top" class="relative block h-7 w-[104px] sm:h-8 sm:w-[120px]" aria-label="饗泰多 首頁">
+      <img src="assets/img/logo-white.png" alt="饗泰多 SIAM MORE"
+           class="logo-white absolute inset-0 h-full w-auto transition-opacity duration-500">
+      <img src="assets/img/logo.png" alt="" aria-hidden="true"
+           class="logo-ink absolute inset-0 h-full w-auto opacity-0 transition-opacity duration-500">
     </a>
-    <div class="ml-auto flex items-center gap-2">
-      <button id="btnCartTop" class="relative rounded-full bg-brand px-3.5 py-2 text-[13px] font-black text-ink transition hover:bg-brand-dark">
+
+    <div class="header-actions flex items-center gap-6 sm:gap-8">
+      <button id="btnCartTop" class="nav-link relative flex items-center gap-2 text-[10px] tracking-[.28em]">
         購物車
-        <span id="cartCountTop" class="absolute -right-1 -top-1 hidden h-5 min-w-[20px] rounded-full bg-thai-red px-1 text-[11px] font-black leading-5 text-white">0</span>
+        <span id="cartCountTop" class="hidden min-w-[16px] rounded-full bg-brand px-1 text-[10px] font-medium leading-4 text-ink">0</span>
       </button>
-      <button id="btnDrawer" class="relative grid h-10 w-10 place-items-center rounded-full bg-white/10 transition hover:bg-white/20" aria-label="開啟選單">
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-          <path d="M2 5h16M2 10h16M2 15h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+
+      <button id="btnDrawer" class="icon-btn -mr-1 grid h-9 w-9 place-items-center" aria-label="開啟選單">
+        <svg width="22" height="12" viewBox="0 0 22 12" fill="none" aria-hidden="true">
+          <path d="M0 1h22M0 6h15M0 11h22" stroke="currentColor" stroke-width="1" stroke-linecap="round"/>
         </svg>
-        <span id="drawerDot" class="absolute right-2.5 top-2.5 hidden h-2 w-2 rounded-full bg-brand"></span>
       </button>
     </div>
   </div>
 </header>
 
-<!-- ============================ 封面 ============================ -->
-<section class="relative flex min-h-[76vh] items-center justify-center overflow-hidden bg-ink">
-  <picture>
-    <source media="(max-width: 640px)" srcset="assets/img/hero-mobile.jpg">
-    <img src="assets/img/hero.jpg" alt="" class="absolute inset-0 h-full w-full object-cover opacity-90" onerror="this.style.display='none'">
-  </picture>
-  <div class="absolute inset-0 bg-gradient-to-b from-ink/85 via-ink/70 to-ink/95"></div>
+<!-- ══════════════════════════════ 封面（左文右圖） ══════════════════════════════ -->
+<section class="relative bg-ink">
+  <div class="grid min-h-[94svh] grid-cols-1 lg:grid-cols-[44%_56%]">
 
-  <div class="relative mx-auto w-full max-w-3xl px-6 py-16 text-center sm:py-24">
-    <img src="assets/img/logo-white.png" alt="饗泰多 SIAM MORE" class="mx-auto h-16 w-auto sm:h-20" onerror="this.style.display='none'">
-    <p class="mt-7 text-[11px] font-black tracking-[.35em] text-brand">2027 春節內用年菜</p>
-    <h1 class="mt-3 text-4xl font-black leading-[1.15] text-white sm:text-6xl">除夕線上預點餐</h1>
-    <p class="mx-auto mt-4 max-w-md text-sm leading-relaxed text-white/75 sm:text-base">
-      先挑一份春節套餐，再依喜好加點菜色。到店直接入座，不用等。
-    </p>
+    <!-- 影像 -->
+    <div class="relative order-1 min-h-[40svh] overflow-hidden sm:min-h-[44svh] lg:order-2 lg:min-h-0">
+      <picture>
+        <source media="(max-width: 1024px)" srcset="assets/img/hero-mobile.jpg">
+        <img src="assets/img/hero.jpg" alt="" class="kenburns absolute inset-0 h-full w-full object-cover">
+      </picture>
+      <div class="absolute inset-0 bg-gradient-to-b from-ink/55 via-ink/5 to-ink/60"></div>
+      <div class="absolute inset-y-0 -left-1 hidden w-28 bg-gradient-to-r from-ink via-ink/70 to-transparent lg:block"></div>
 
-    <div class="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
-      <button id="btnStart" class="w-full rounded-full bg-brand px-9 py-4 text-base font-black text-ink shadow-pop transition hover:bg-brand-dark active:scale-[.98] sm:w-auto">
-        開始點餐
-      </button>
-      <button id="btnCoverLogin" class="w-full rounded-full border border-white/35 px-9 py-4 text-base font-bold text-white transition hover:bg-white/10 sm:w-auto">
-        <span id="coverLoginLabel">登入 / 我的訂單</span>
-      </button>
+      <!-- 小象跑步 -->
+      <div class="ele-stage" aria-hidden="true">
+        <div class="ele-run">
+          <svg class="ele" viewBox="0 0 140 98" fill="none">
+            <g class="ele-bob">
+              <path class="ele-tail" d="M29 45c-8-1-12-7-12-14" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+              <rect class="leg leg-a" x="38" y="58" width="11" height="34" rx="5.5" fill="currentColor" opacity=".38"/>
+              <rect class="leg leg-c" x="74" y="58" width="11" height="34" rx="5.5" fill="currentColor" opacity=".38"/>
+              <ellipse cx="62" cy="48" rx="37" ry="23" fill="currentColor"/>
+              <circle cx="99" cy="41" r="17.5" fill="currentColor"/>
+              <path class="ele-trunk" d="M112 54c2.5 7 2.5 14 0 19-2 4-5.5 6-9.5 6" stroke="currentColor" stroke-width="9" stroke-linecap="round"/>
+              <ellipse class="ele-ear" cx="93" cy="40" rx="12.5" ry="15.5" fill="currentColor"/>
+              <ellipse cx="93" cy="40" rx="7" ry="9.5" fill="#17140F" opacity=".13"/>
+              <circle cx="108" cy="34" r="2.6" fill="#17140F"/>
+              <rect class="leg leg-b" x="48" y="60" width="11.5" height="32" rx="5.75" fill="currentColor"/>
+              <rect class="leg leg-d" x="86" y="60" width="11.5" height="32" rx="5.75" fill="currentColor"/>
+            </g>
+          </svg>
+          <div class="dust"><i></i><i></i><i></i></div>
+        </div>
+      </div>
+
     </div>
 
-    <p class="mt-6 text-[11px] leading-relaxed text-white/45">
-      限訂位客人下單・內用加收 10% 服務費・每人最低消費 $600
-    </p>
-    <a href="#sets" class="mt-10 inline-block text-[12px] text-white/35 transition hover:text-white/70">先看看菜單 ↓</a>
+    <!-- 文字 -->
+    <div class="order-2 flex flex-col justify-center px-6 pb-32 pt-12 sm:px-12 sm:pb-20 lg:order-1 lg:px-14 lg:py-24 xl:px-20">
+      <p class="rise caps text-gold-soft" style="--d:150ms">Siam More · Chinese New Year 2027</p>
+
+      <div class="rule-grow mt-6 h-px w-14 bg-gold-soft/60" style="--d:400ms"></div>
+
+      <h1 class="rise serif mt-8 text-[clamp(31px,5.2vw,56px)] leading-[1.2] tracking-[.06em] text-[#F8F3EA]" style="--d:260ms">
+        除夕線上預點餐
+      </h1>
+
+      <p class="rise mt-7 max-w-[23rem] text-[12.5px] leading-[2.1] tracking-[.09em] text-white/55" style="--d:560ms">
+        先挑一份春節套餐，再依喜好加點菜色。<br>到店直接入座，把時間留給團圓。
+      </p>
+
+      <div class="rise mt-11 flex flex-col gap-3 sm:flex-row sm:gap-4" style="--d:780ms">
+        <button id="btnStart" class="btn btn-light w-full sm:w-auto">開始點餐</button>
+        <button id="btnCoverLogin" class="btn btn-on-dark w-full sm:w-auto">
+          <span id="coverLoginLabel">登入 / 我的訂單</span>
+        </button>
+      </div>
+
+      <div class="rise mt-12 h-px w-full max-w-[23rem] bg-white/12" style="--d:920ms"></div>
+
+      <p class="rise mt-5 max-w-[23rem] text-[9.5px] leading-[2] tracking-[.22em] text-white/30" style="--d:980ms">
+        限訂位客人・內用加收 10% 服務費・每人最低消費 $600
+      </p>
+    </div>
   </div>
 </section>
 
-<!-- ============================ 一行規則提示 ============================ -->
-<div class="border-b border-ink/10 bg-white">
-  <p class="mx-auto max-w-6xl px-4 py-2.5 text-center text-[11px] leading-relaxed text-ink-mute">
+<!-- ══════════════════════════════ 一行須知 ══════════════════════════════ -->
+<div class="border-b border-[rgba(23,20,15,.09)] bg-paper">
+  <p class="mx-auto max-w-[1200px] px-5 py-3.5 text-center text-[10.5px] leading-relaxed tracking-[.16em] text-ink-mute sm:px-8">
     春節期間單點須先點選任一「春節多人套餐」・辣度
-    <img src="assets/img/spicy.png" alt="辣" class="inline-block h-3 w-auto align-[-1px]">
-    <img src="assets/img/spicy.png" alt="辣" class="inline-block h-3 w-auto align-[-1px]"> 較辣
-    <span id="deadlineNote" class="hidden font-bold text-thai-red"></span>
+    <img src="assets/img/spicy.png" alt="辣" class="inline-block h-2.5 w-auto align-[-1px] opacity-80">
+    <img src="assets/img/spicy.png" alt="辣" class="inline-block h-2.5 w-auto align-[-1px] opacity-80"> 較辣
+    <span id="deadlineNote" class="hidden text-thai-red"></span>
   </p>
 </div>
 
-<main class="mx-auto max-w-6xl px-4 pb-28 pt-8">
+<main class="mx-auto max-w-[1200px] px-5 pb-28 sm:px-8">
 
-  <!-- ======================= 春節套餐 ======================= -->
-  <section id="sets" class="scroll-mt-20">
-    <div class="mb-4 flex flex-wrap items-end justify-between gap-2">
+  <!-- ───────────── 01 春節套餐 ───────────── -->
+  <section id="sets" class="scroll-mt-24 pt-16 sm:pt-24">
+    <header class="reveal flex items-end justify-between gap-6 border-b border-[rgba(23,20,15,.13)] pb-6">
       <div>
-        <h2 class="text-2xl font-black">① 春節多人套餐</h2>
-        <p class="text-sm text-ink-mute">春節期間<b class="text-thai-red">必須先選擇一份套餐</b>，才能單點加點。</p>
+        <p class="caps">01 — Sets</p>
+        <h2 class="serif mt-2.5 text-[26px] tracking-[.08em] sm:text-[32px]">春節多人套餐</h2>
       </div>
-      <p class="text-xs text-ink-mute">已含白飯與飲料；服務費另計 10%</p>
-    </div>
-    <div id="setList" class="grid gap-6 lg:grid-cols-2"></div>
+      <p class="hidden max-w-[14rem] text-right text-[10.5px] leading-relaxed tracking-[.14em] text-ink-mute sm:block">
+        含白飯與飲料<br>服務費另計 10%
+      </p>
+    </header>
+    <div id="setList" class="reveal mt-9 grid gap-6 sm:gap-7 lg:grid-cols-2 lg:gap-8"></div>
   </section>
 
-  <!-- ======================= 單點 ======================= -->
-  <section id="alacarte" class="mt-14 scroll-mt-20">
-    <div class="mb-4 flex flex-wrap items-end justify-between gap-2">
+  <!-- ───────────── 02 單點 ───────────── -->
+  <section id="alacarte" class="scroll-mt-24 pt-20 sm:pt-28">
+    <header class="reveal flex items-end justify-between gap-6 border-b border-[rgba(23,20,15,.13)] pb-6">
       <div>
-        <h2 class="text-2xl font-black">② 單點加點</h2>
-        <p id="alcHint" class="text-sm text-ink-mute">先選一份春節套餐即可解鎖單點菜色。</p>
+        <p class="caps">02 — À la carte</p>
+        <h2 class="serif mt-2.5 text-[26px] tracking-[.08em] sm:text-[32px]">單點加點</h2>
       </div>
+      <p id="alcHint" class="hidden max-w-[16rem] text-right text-[10.5px] leading-relaxed tracking-[.14em] text-ink-mute sm:block"></p>
+    </header>
+
+    <div id="catTabs" class="no-scrollbar sticky top-0 z-30 -mx-5 mt-7 overflow-x-auto bg-paper/95 px-5 py-3 backdrop-blur sm:-mx-8 sm:px-8">
+      <div class="flex items-center"></div>
     </div>
 
-    <!-- 未選套餐時的提示 -->
-    <div id="alcLock" class="mb-5 rounded-2xl border-2 border-dashed border-brand-deep bg-brand/20 p-5 text-center">
-      <p class="text-3xl">🔒</p>
-      <p class="mt-1 font-black">單點尚未解鎖</p>
-      <p class="mt-1 text-sm text-ink-soft">依門市規定：春節期間限點選任一「春節多人套餐」，方能進行單點加點。</p>
-      <a href="#sets" class="mt-3 inline-block rounded-full bg-ink px-5 py-2 text-sm font-bold text-white">前往挑選套餐</a>
-    </div>
-
-    <!-- 分類頁籤 -->
-    <div id="catTabs" class="sticky top-[56px] z-30 -mx-4 mb-4 overflow-x-auto bg-[#FFFBF0]/95 px-4 py-2 backdrop-blur no-scrollbar">
-      <div class="flex gap-2 whitespace-nowrap"></div>
-    </div>
-    <div id="alcList" class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4"></div>
+    <div id="alcList" class="reveal grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-4"></div>
   </section>
 </main>
 
-<!-- ============================ 頁尾 ============================ -->
-<footer class="border-t border-ink/10 bg-ink py-9 text-center text-xs text-white/70">
-  <img src="assets/img/logo-white.png" alt="饗泰多 SIAM MORE" class="mx-auto h-10 w-auto" onerror="this.style.display='none'">
-  <p class="mt-3">2027 春節除夕線上預點餐系統</p>
-  <p id="footContact" class="mt-1"></p>
-  <p class="mt-3 text-white/40">僅供參考，菜單內容以現場供應為主・本頁不含線上結帳，款項請於現場結清</p>
-  <p class="mt-5"><a href="staff.html" class="text-[11px] text-white/20 transition hover:text-white/60">員工專用</a></p>
+<!-- ══════════════════════════════ 頁尾 ══════════════════════════════ -->
+<footer class="bg-ink px-5 py-14 text-center sm:px-8">
+  <img src="assets/img/logo-white.png" alt="饗泰多 SIAM MORE" class="mx-auto h-9 w-auto opacity-90">
+  <p class="serif mt-5 text-[13px] tracking-[.2em] text-white/70">2027 春節除夕線上預點餐</p>
+  <p id="footContact" class="mt-2 text-[10.5px] tracking-[.2em] text-white/40"></p>
+  <div class="mx-auto mt-8 h-px w-12 bg-white/15"></div>
+  <p class="mt-8 text-[10px] leading-relaxed tracking-[.18em] text-white/30">
+    菜單內容以現場供應為主・本頁不含線上結帳，款項請於現場結清
+  </p>
+  <p class="mt-9">
+    <a href="staff.html" class="text-[9.5px] tracking-[.26em] text-white/20 transition hover:text-white/55">員工專用</a>
+  </p>
 </footer>
 
-<!-- ============================ 手機底部操作列 ============================ -->
-<div class="fixed inset-x-0 bottom-0 z-40 border-t border-ink/10 bg-white/95 px-4 pb-[max(10px,env(safe-area-inset-bottom))] pt-2.5 backdrop-blur sm:hidden">
-  <div class="flex items-center gap-3">
+<!-- ══════════════════════════════ 手機底部列 ══════════════════════════════ -->
+<div class="fixed inset-x-0 bottom-0 z-40 border-t border-[rgba(23,20,15,.12)] bg-paper/95 px-5 pb-[max(12px,env(safe-area-inset-bottom))] pt-3 backdrop-blur-md sm:hidden">
+  <div class="flex items-center gap-4">
     <div class="min-w-0 flex-1">
-      <p class="text-[11px] text-ink-mute">目前 <span id="cartCountBar">0</span> 樣・總計（含服務費）</p>
-      <p id="cartTotalBar" class="text-xl font-black leading-tight">$0</p>
+      <p class="text-[9.5px] tracking-[.24em] text-ink-mute">目前 <span id="cartCountBar">0</span> 樣・含服務費</p>
+      <p id="cartTotalBar" class="num mt-0.5 text-[17px] tracking-wide">$0</p>
     </div>
-    <button id="btnCartBar" class="rounded-full bg-ink px-6 py-3 text-sm font-black text-white">查看購物車</button>
+    <button id="btnCartBar" class="btn btn-solid px-5 py-3 text-[11px]">查看購物車</button>
   </div>
 </div>
 
-<!-- ============================ 三條線選單 ============================ -->
-<div id="drawerOverlay" class="fixed inset-0 z-50 hidden bg-ink/50 backdrop-blur-sm"></div>
-<aside id="drawer" class="fixed inset-y-0 right-0 z-50 flex w-80 max-w-[86vw] translate-x-full flex-col bg-[#FFFBF0] shadow-pop transition-transform duration-300">
-  <div class="flex items-center justify-between border-b border-ink/10 bg-white px-4 py-3">
-    <img src="assets/img/logo.png" alt="饗泰多 SIAM MORE" class="h-7 w-auto" onerror="this.style.display='none'">
-    <button data-drawer-close class="grid h-9 w-9 place-items-center rounded-full bg-ink/5 transition hover:bg-ink/10" aria-label="關閉選單">✕</button>
+<!-- ══════════════════════════════ 三條線選單 ══════════════════════════════ -->
+<div id="drawerOverlay" class="fixed inset-0 z-50 hidden bg-ink/45 backdrop-blur-sm"></div>
+<aside id="drawer" class="fixed inset-y-0 right-0 z-50 flex w-[86vw] max-w-[380px] translate-x-full flex-col bg-paper shadow-[0_20px_80px_-30px_rgba(23,20,15,.6)]">
+  <div class="flex items-center justify-between border-b border-[rgba(23,20,15,.1)] px-5 py-4">
+    <img src="assets/img/logo.png" alt="饗泰多 SIAM MORE" class="h-6 w-auto">
+    <button data-drawer-close class="grid h-8 w-8 place-items-center text-ink/50 transition hover:text-ink" aria-label="關閉選單">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 1l12 12M13 1L1 13" stroke="currentColor" stroke-width="1.2"/></svg>
+    </button>
   </div>
-  <div id="drawerBody" class="flex-1 overflow-y-auto px-4 py-4"></div>
+  <div id="drawerBody" class="flex-1 overflow-y-auto px-5 py-6"></div>
 </aside>
 
-<!-- ============================ 購物車側欄 ============================ -->
-<div id="cartOverlay" class="fixed inset-0 z-50 hidden bg-ink/50 backdrop-blur-sm"></div>
-<aside id="cartPanel" class="fixed inset-y-0 right-0 z-50 flex w-full max-w-md translate-x-full flex-col bg-[#FFFBF0] shadow-pop transition-transform duration-300">
-  <div class="flex items-center justify-between border-b border-ink/10 bg-white px-4 py-3">
-    <h3 class="text-lg font-black">我的購物車</h3>
-    <button data-close-cart class="grid h-9 w-9 place-items-center rounded-full bg-ink/5 hover:bg-ink/10" aria-label="關閉">✕</button>
+<!-- ══════════════════════════════ 購物車 ══════════════════════════════ -->
+<div id="cartOverlay" class="fixed inset-0 z-50 hidden bg-ink/45 backdrop-blur-sm"></div>
+<aside id="cartPanel" class="fixed inset-y-0 right-0 z-50 flex w-full max-w-[440px] translate-x-full flex-col bg-paper shadow-[0_20px_80px_-30px_rgba(23,20,15,.6)]">
+  <div class="flex items-center justify-between border-b border-[rgba(23,20,15,.1)] px-5 py-4">
+    <h3 class="serif text-[15px] tracking-[.24em]">我的購物車</h3>
+    <button data-close-cart class="grid h-8 w-8 place-items-center text-ink/50 transition hover:text-ink" aria-label="關閉">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 1l12 12M13 1L1 13" stroke="currentColor" stroke-width="1.2"/></svg>
+    </button>
   </div>
-  <div id="cartBody" class="flex-1 overflow-y-auto px-4 py-4"></div>
-  <div id="cartFoot" class="border-t border-ink/10 bg-white px-4 py-4"></div>
+  <div id="cartBody" class="flex-1 overflow-y-auto px-5 py-5"></div>
+  <div id="cartFoot" class="border-t border-[rgba(23,20,15,.1)] bg-[#F6F1E9] px-5 py-5"></div>
 </aside>
 
-<!-- ============================ 通用彈窗 ============================ -->
-<div id="modal" class="fixed inset-0 z-[60] hidden items-end justify-center bg-ink/60 p-0 backdrop-blur-sm sm:items-center sm:p-4">
-  <div id="modalBox" class="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-3xl bg-white shadow-pop sm:rounded-3xl"></div>
+<!-- ══════════════════════════════ 彈窗 ══════════════════════════════ -->
+<div id="modal" class="fixed inset-0 z-[60] hidden items-end justify-center bg-ink/55 backdrop-blur-sm sm:items-center sm:p-6">
+  <div id="modalBox" class="max-h-[92vh] w-full max-w-[560px] overflow-y-auto bg-white shadow-[0_30px_120px_-40px_rgba(23,20,15,.7)]"></div>
 </div>
 
-<!-- Toast -->
-<div id="toast" class="pointer-events-none fixed left-1/2 top-16 z-[70] hidden -translate-x-1/2 rounded-full bg-ink px-5 py-2.5 text-sm font-bold text-white shadow-pop"></div>
+<div id="toast" class="pointer-events-none fixed left-1/2 top-20 z-[70] hidden -translate-x-1/2 bg-ink px-6 py-3 text-[12px] tracking-[.14em] text-white/95"></div>
 
 <script src="js/config.js"></script>
 <script src="js/data.js"></script>
