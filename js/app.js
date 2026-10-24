@@ -1422,7 +1422,11 @@ function bindEvents() {
     if (d.closeCart !== undefined) return toggleCart(false);
   });
 
-  $('#btnCartTop').addEventListener('click', () => (hasOrder() ? openMyOrders() : toggleCart()));
+  $('#btnCartTop').addEventListener('click', async () => {
+    // 第一次點時狀態可能還沒抓回來 → 先確認再決定開哪一個
+    if (loggedIn() && !S.hasOrder) await refreshMyOrderState(false);
+    if (hasOrder()) openMyOrders(); else toggleCart();
+  });
   $('#btnCartBar').addEventListener('click', () => toggleCart());
   $('#cartOverlay').addEventListener('click', () => toggleCart(false));
 
