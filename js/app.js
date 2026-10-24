@@ -888,47 +888,50 @@ function openCheckout() {
   const { min, max, slots } = { min: CFG.orders.openFrom, max: CFG.orders.openTo, slots: CFG.orders.timeSlots };
 
   openModal(`
-    <div class="flex items-start justify-between border-b border-ink/10 px-4 py-3">
+    <div class="flex items-start justify-between border-b border-[rgba(23,20,15,.1)] px-6 py-5">
       <div>
-        <h3 class="text-lg font-black">填寫訂購資料</h3>
-        <p class="text-[12px] text-ink-mute">${S.editing ? `修改訂單 ${esc(S.editing)}` : '送出後我們會替您備餐'}</p>
+        <p class="caps">Order</p>
+        <h3 class="serif mt-2 text-[19px] tracking-[.14em]">填寫訂購資料</h3>
+        <p class="mt-2 text-[11px] tracking-[.08em] text-ink-mute">${S.editing ? `修改訂單 ${esc(S.editing)}` : '送出後我們會替您備餐'}</p>
       </div>
-      <button data-close-modal class="grid h-9 w-9 place-items-center rounded-full bg-ink/5">✕</button>
+      <button data-close-modal class="grid h-8 w-8 shrink-0 place-items-center text-ink/40 transition hover:text-ink" aria-label="關閉">
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M1 1l12 12M13 1L1 13" stroke="currentColor" stroke-width="1.2"/></svg>
+      </button>
     </div>
-    <form id="orderForm" class="space-y-3 px-4 py-4">
+    <form id="orderForm" class="space-y-5 px-6 py-6">
       <div class="grid gap-3 sm:grid-cols-2">
         <label class="block">
-          <span class="text-[12px] font-black">姓名 *</span>
+          <span class="field-label">姓名</span>
           <input name="name" required value="${esc(S.user.name)}"
-                 class="mt-1 w-full rounded-xl border border-ink/15 px-3 py-2.5 text-sm outline-none focus:border-ink">
+                 class="field">
         </label>
         <label class="block">
-          <span class="text-[12px] font-black">電話 *</span>
+          <span class="field-label">電話</span>
           <input name="phone" required inputmode="numeric" maxlength="10" value="${esc(S.user.phone)}"
-                 class="mt-1 w-full rounded-xl border border-ink/15 px-3 py-2.5 text-sm outline-none focus:border-ink">
+                 class="field">
         </label>
         <label class="block">
-          <span class="text-[12px] font-black">預計取餐日 *</span>
+          <span class="field-label">預計取餐日</span>
           <input name="date" type="date" required min="${min}" max="${max}" value="${min}"
-                 class="mt-1 w-full rounded-xl border border-ink/15 px-3 py-2.5 text-sm outline-none focus:border-ink">
+                 class="field">
         </label>
         <label class="block">
-          <span class="text-[12px] font-black">預計取餐時間 *</span>
-          <select name="time" required class="mt-1 w-full rounded-xl border border-ink/15 px-3 py-2.5 text-sm outline-none focus:border-ink">
+          <span class="field-label">預計取餐時間</span>
+          <select name="time" required class="field">
             ${slots.map((t) => `<option value="${t}">${t}</option>`).join('')}
           </select>
         </label>
       </div>
       <label class="block">
-        <span class="text-[12px] font-black">備註 <span class="font-normal text-ink-mute">（素食、兒童座椅、飲料升級說明…）</span></span>
-        <textarea name="note" rows="2" class="mt-1 w-full rounded-xl border border-ink/15 px-3 py-2.5 text-sm outline-none focus:border-ink"></textarea>
+        <span class="field-label">備註</span>
+        <textarea name="note" rows="2" class="field"></textarea>
       </label>
 
-      <div class="rounded-2xl bg-[#F7F4EC] p-3 text-[12px] leading-relaxed">
-        <p class="font-black">訂單摘要</p>
-        <p class="mt-1 text-ink-soft">用餐人數：${c.headcount} 人（依套餐人數計算）</p>
-        <p class="text-ink-soft">套餐 ${fmt(c.setsSubtotal)} + 單點 ${fmt(c.alcSubtotal)} + 服務費 ${fmt(c.service)}</p>
-        <p class="mt-1 text-base font-black">總計 ${fmt(c.total)}</p>
+      <div class="border-t border-[rgba(23,20,15,.13)] pt-4 text-[11px] leading-[2] tracking-[.06em]">
+        <p class="caps mb-2">Summary</p>
+        <p class="text-ink-mute">用餐人數：${c.headcount} 人（依套餐人數計算）</p>
+        <p class="text-ink-mute">套餐 ${fmt(c.setsSubtotal)} ・ 單點 ${fmt(c.alcSubtotal)} ・ 服務費 ${fmt(c.service)}</p>
+        <p class="num mt-2 text-[17px] tracking-wide">總計 ${fmt(c.total)}</p>
         ${c.headcount && c.subtotal / c.headcount < CFG.rules.minSpendPerPerson
           ? `<p class="mt-1 font-bold text-thai-red">⚠ 每人平均 ${fmt(round(c.subtotal / c.headcount))}，未達最低消費 ${fmt(CFG.rules.minSpendPerPerson)}</p>` : ''}
       </div>
@@ -936,10 +939,10 @@ function openCheckout() {
       ${(apiReady() || CFG.form.action) ? '' : `<p class="rounded-xl bg-amber-50 px-3 py-2 text-[11px] leading-relaxed text-amber-900">
         ⓘ <b>示範模式</b>：尚未連接門市系統（Apps Script 與 Google 表單都未設定），送出後訂單只會存在本機。設定方式見 SETUP.md。</p>`}
 
-      <button id="btnSubmit" class="w-full rounded-full bg-brand py-3.5 text-sm font-black text-ink transition hover:bg-brand-dark">
+      <button id="btnSubmit" class="btn btn-solid w-full text-[11.5px]">
         確認送出訂單
       </button>
-      <p class="text-center text-[11px] text-ink-mute">本頁不含線上付款，款項請於現場結清</p>
+      <p class="text-center text-[9.5px] tracking-[.16em] text-ink-mute">本頁不含線上付款・款項請於現場結清</p>
     </form>`, {
     onMount: (root) => { $('#orderForm', root).addEventListener('submit', submitOrder); },
   });
