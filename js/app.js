@@ -321,18 +321,6 @@ function syncDraftUI() {
   dc.className = `text-[11px] font-bold ${drinksOK ? 'text-thai-green'
     : (S.draft.tried === true ? 'text-thai-red' : 'text-ink-mute')}`;
 
-  // 辣度調整：已選且可改不辣的菜
-  const mildSel = [];
-  def.groups.forEach((g) => (S.draft.picks[g.key] || []).forEach((nm) => { if (canNoSpicy(nm)) mildSel.push(nm); }));
-  const mildBox = $('#mildBox');
-  if (mildBox) {
-    mildBox.innerHTML = mildSel.length ? `<div class="group-box">
-      <div class="group-head"><p class="text-sm font-black">辣度 <span class="text-ink-mute">／可選不辣</span></p></div>
-      <div class="mt-2 flex flex-wrap gap-1.5">
-        ${mildSel.map((nm) => `<button class="chip ${S.draft.mild[nm] ? 'on' : ''}" data-mildpick="${esc(nm)}">${esc(nm)} 不辣</button>`).join('')}
-      </div></div>` : '';
-  }
-
   $$('[data-upgrade]').forEach((b) => b.classList.toggle('on', S.draft.upgrades.includes(b.dataset.upgrade)));
 
   const btn = $('[data-add-set]');
@@ -457,6 +445,33 @@ function openTempPicker(itemId) {
       });
     },
   });
+}
+
+function askMild(name, anchor) {
+  document.querySelectorAll('.mild-pop').forEach((n) => n.remove());
+  const on = !!((S.draft.mild || {})[name]);
+  const pop = document.createElement('div');
+  pop.className = 'mild-pop';
+  pop.innerHTML = `<p>${esc(name)}</p><div class="row"><button data-mild-now="0" class="${on ? '' : 'on'}">正常</button><button data-mild-now="1" class="${on ? 'on' : ''}">不辣</button></div>`;
+  document.body.appendChild(pop);
+  const r = anchor && anchor.getBoundingClientRect ? anchor.getBoundingClientRect() : { left: window.innerWidth / 2 - 88, bottom: window.innerHeight / 2, width: 0 };
+  pop.style.top = `${Math.max(10, Math.min(r.bottom + 8, window.innerHeight - 110)) + window.scrollY}px`;
+  pop.style.left = `${Math.max(12, Math.min(r.left, window.innerWidth - 196)) + window.scrollX}px`;
+  pop.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-mild-now]');
+    if (!b) return;
+    if (!S.draft.mild) S.draft.mild = {};
+    if (b.dataset.mildNow === '1') S.draft.mild[name] = true;
+    else delete S.draft.mild[name];
+    pop.remove();
+    syncDraftUI();
+  });
+  setTimeout(() => {
+    const off = (ev) => {
+      if (!pop.contains(ev.target)) { pop.remove(); document.removeEventListener('click', off, true); }
+    };
+    document.addEventListener('click', off, true);
+  }, 0);
 }
 
 function addAlcLine(itemId, temp, spicy) {
@@ -1313,10 +1328,16 @@ function bindEvents() {
       const g = SETS.find((s) => s.id === S.draft.setId).groups.find((x) => x.key === d.pick);
       const arr = S.draft.picks[d.pick];
       const i = arr.indexOf(d.value);
+      const nowOn = i < 0;
       if (i >= 0) arr.splice(i, 1);
       else if (arr.length < g.pick) arr.push(d.value);
       else { arr.shift(); arr.push(d.value); toast(`「${g.label}」最多選 ${g.pick} 道，已自動替換`); }
-      return syncDraftUI();
+      syncDraftUI();
+      // 辣菜：直接在點的位置彈出「正常／不辣」
+      if (nowOn && canNoSpicy(d.value)) {
+        askMild(d.value, document.querySelector(`[data-pick="${d.pick}"][data-value="${d.value}"]`));
+      }
+      return;
     }
     if (d.mildpick !== undefined) {
       S.draft.mild[d.mildpick] = !S.draft.mild[d.mildpick];
