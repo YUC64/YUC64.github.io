@@ -371,18 +371,21 @@ function openTempPicker(itemId) {
   const temps = tempsOf(item.name);
   if (!temps.length) return addAlcLine(itemId, '');
   openModal(`
-    <div class="flex items-start justify-between border-b border-ink/10 px-4 py-3">
+    <div class="flex items-start justify-between border-b border-[rgba(23,20,15,.1)] px-6 py-5">
       <div>
-        <h3 class="text-lg font-black">${esc(item.name)}</h3>
-        <p class="text-[12px] text-ink-mute">${fmt(item.price)}・請選擇${esc(temps.join('／'))}</p>
+        <p class="caps">Option</p>
+        <h3 class="serif mt-2 text-[19px] tracking-[.12em]">${esc(item.name)}</h3>
+        <p class="mt-2 text-[11px] tracking-[.08em] text-ink-mute">${fmt(item.price)}・請選擇${esc(temps.join('／'))}</p>
       </div>
-      <button data-close-modal class="grid h-9 w-9 place-items-center rounded-full bg-ink/5">✕</button>
+      <button data-close-modal class="grid h-8 w-8 shrink-0 place-items-center text-ink/40 transition hover:text-ink" aria-label="關閉">
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M1 1l12 12M13 1L1 13" stroke="currentColor" stroke-width="1.2"/></svg>
+      </button>
     </div>
-    <div class="px-4 py-4">
+    <div class="px-6 py-6">
       <div class="flex flex-wrap gap-2" id="tempChips">
         ${temps.map((t, i) => `<button class="chip ${i === 0 ? 'on' : ''}" data-temp="${esc(t)}">${esc(t)}</button>`).join('')}
       </div>
-      <button id="btnTempAdd" class="mt-4 w-full rounded-full bg-brand py-3 text-sm font-black text-ink hover:bg-brand-dark">
+      <button id="btnTempAdd" class="btn btn-solid mt-6 w-full text-[11.5px]">
         加入訂單
       </button>
     </div>`, {
