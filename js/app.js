@@ -80,7 +80,7 @@ async function refreshMyOrderState(autoOpen) {
   } catch (e) { /* 連線異常就沿用本機判斷 */ }
   // 右上按鈕文字：已送出 → 我的訂單
   const lbl = document.querySelector('#btnCartTop [data-top-label]');
-  if (lbl) lbl.textContent = S.hasOrder ? '我的訂單' : '訂單';
+  if (lbl) lbl.textContent = S.hasOrder ? '我的點餐' : '訂單';
   if (S.hasOrder && autoOpen) openMyOrders();
 }
 
@@ -591,11 +591,11 @@ function renderCart() {
         <span class="font-black">總計</span><span class="text-2xl font-black text-thai-red">${fmt(c.total)}</span>
       </div>
       ${c.headcount ? `<p class="text-right text-[11px] ${lowSpend ? 'font-bold text-thai-red' : 'text-ink-mute'}">
-        用餐人數 ${c.headcount} 人・每人平均 ${fmt(round(perPerson))}${lowSpend ? `（未達最低消費 ${fmt(CFG.rules.minSpendPerPerson)}）` : ''}</p>` : ''}
+        每人平均 ${fmt(round(perPerson))}${lowSpend ? `（未達最低消費 ${fmt(CFG.rules.minSpendPerPerson)}）` : ''}</p>` : ''}
     </div>
     <button id="btnCheckout" ${canCheckout || !loggedIn() ? '' : 'disabled'}
       class="btn mt-4 w-full text-[11.5px] ${canCheckout || !loggedIn() ? 'btn-solid' : 'btn-line is-disabled'}">
-      ${!loggedIn() ? '登入' : (alcLocked() ? '請先選擇套餐' : '前往填寫訂購資料')}
+      ${!loggedIn() ? '登入' : (alcLocked() ? '請先選擇套餐' : '前往確認訂購資料')}
     </button>
     <p class="mt-3 text-center text-[9.5px] tracking-[.16em] text-ink-mute">送出即代表同意門市訂購規則・現場結帳</p>`;
 
@@ -611,7 +611,7 @@ function renderCart() {
     topBtn.classList.toggle('hidden', !on);
     // 已送出訂單 → 這顆按鈕就是「我的訂單」
     const lbl = topBtn.querySelector('[data-top-label]');
-    if (lbl) lbl.textContent = hasOrder() ? '我的訂單' : '訂單';
+    if (lbl) lbl.textContent = hasOrder() ? '我的點餐' : '訂單';
   }
   const bar = $('#mobileBar');
   if (bar) bar.classList.toggle('hidden', !on || !c.count);   // 沒有餐點時不佔版面
@@ -880,8 +880,7 @@ function openGuide() {
       <li>套餐內每個品類都需依「<b>選 N</b>」規則選滿（含飲料）；飲料可依杯選擇<b>冰／去冰／熱</b>。</li>
       <li>辣度依門市菜單標示：${sp}${sp} 較辣・${sp} 微辣・未標示者為不辣。</li>
       <li>甜點與飲料可選<b>冰／去冰／冷／熱</b>（摩摩喳喳：冰／去冰；椰香黑糯米：冷／熱；泰式奶茶：冰／去冰／熱）。</li>
-      <li>完成訂購後畫面會顯示<b>訂單編號</b>；之後用同一支手機＋驗證碼登入，可在「我的訂單」<b>修改或取消</b>（修改會直接覆蓋門市試算表上的同一筆，不會多一列）。</li>
-      <li>飲料「加價升級酒類／特調飲品」之價差依現場公告，於現場結帳時計算。</li>
+      <li>完成訂購後畫面會顯示<b>訂單編號</b>；之後用同一支手機＋驗證碼登入，可在「我的點餐」<b>修改或取消</b>（修改會直接覆蓋門市試算表上的同一筆，不會多一列）。</li>
       <li>本頁為預先點餐登記，<b>不含線上結帳與金流</b>，款項請於現場結清。</li>
       <li>僅供參考，菜單內容以現場供應為主。</li>
     </ol>
@@ -893,7 +892,7 @@ function openGuide() {
 /** 三條線選單的內容：會員區塊＋導覽＋用餐須知 */
 function renderMember() {
   const cl = $('#coverLoginLabel');
-  if (cl) cl.textContent = S.user ? '我的訂單' : '登入 / 我的訂單';
+  if (cl) cl.textContent = S.user ? '我的點餐' : '登入 / 我的點餐';
   const dot = $('#drawerDot');
   if (dot) dot.classList.toggle('hidden', !S.user);
 
@@ -912,7 +911,7 @@ function renderMember() {
           </div>
         </div>
         <div class="mt-4 grid grid-cols-2 gap-2">
-          <button data-menu-action="orders" class="btn btn-solid px-3 py-2.5 text-[10.5px]">我的訂單</button>
+          <button data-menu-action="orders" class="btn btn-solid px-3 py-2.5 text-[10.5px]">我的點餐</button>
           <button data-menu-action="logout" class="btn btn-line px-3 py-2.5 text-[10.5px]">登出</button>
         </div>
       </div>`
@@ -1044,7 +1043,7 @@ function renderMyOrders(list, offline) {
         renderAll();
         toggleCart(true);
         toast(o.cart
-          ? '已載入原訂單內容，改好後按「前往填寫訂購資料」重新送出'
+          ? '已載入原訂單內容，改好後按「前往確認訂購資料」重新送出'
           : '此訂單沒有可載入的內容，請重新選擇菜色後送出', 4200);
       }));
       $$('[data-cancel-order]', root).forEach((b) => b.addEventListener('click', () => {
@@ -1066,7 +1065,7 @@ function openCheckout() {
     <div class="flex items-start justify-between border-b border-[rgba(23,20,15,.1)] px-6 py-5">
       <div>
         <p class="caps">Order</p>
-        <h3 class="serif mt-2 text-[19px] tracking-[.14em]">填寫訂購資料</h3>
+        <h3 class="serif mt-2 text-[19px] tracking-[.14em]">確認訂購資料</h3>
         <p class="mt-2 text-[11px] tracking-[.08em] text-ink-mute">${S.editing ? `修改訂單 ${esc(S.editing)}` : '送出後我們會替您備餐'}</p>
       </div>
       <button data-close-modal class="grid h-8 w-8 shrink-0 place-items-center text-ink/40 transition hover:text-ink" aria-label="關閉">
@@ -1087,13 +1086,16 @@ function openCheckout() {
         </label>
       </div>
       <label class="block">
+        <span class="field-label">車號 <span class="text-ink-mute">（停車場登記用，騎車或未開車可留空）</span></span>
+        <input name="car" maxlength="12" placeholder="例：ABC-1234" class="field" value="">
+      </label>
+      <label class="block">
         <span class="field-label">備註</span>
         <textarea name="note" rows="2" class="field"></textarea>
       </label>
 
       <div class="border-t border-[rgba(23,20,15,.13)] pt-4 text-[11px] leading-[2] tracking-[.06em]">
         <p class="caps mb-2">Summary</p>
-        <p class="text-ink-mute">用餐人數：${c.headcount} 人（依套餐人數計算）</p>
         <p class="text-ink-mute">套餐 ${fmt(c.setsSubtotal)} ・ 單點 ${fmt(c.alcSubtotal)} ・ 服務費 ${fmt(c.service)}</p>
         <p class="num mt-2 text-[17px] tracking-wide">總計 ${fmt(c.total)}</p>
         ${c.headcount && c.subtotal / c.headcount < CFG.rules.minSpendPerPerson
@@ -1150,6 +1152,7 @@ async function submitOrder(ev) {
   const name = f.name.value.trim();
   const phone = f.phone.value.replace(/\D/g, '');
   const note = f.note.value.trim();
+  const car = f.car.value.trim();
 
   if (!name) return toast('請填寫姓名');
   if (!/^09\d{8}$/.test(phone)) return toast('電話格式錯誤（09 開頭共 10 碼）');
@@ -1178,6 +1181,7 @@ async function submitOrder(ev) {
     service: String(c.service),
     total: String(c.total),
     note: flag + (note || '無'),
+    car: car || '無',
     ts: new Date().toLocaleString('zh-TW', { hour12: false }),
   };
 
@@ -1261,7 +1265,7 @@ function showSuccess(record, delivered) {
         <p class="text-[11px] font-black text-ink-mute">訂單編號</p>
         <p class="text-2xl font-black tracking-wider">${esc(record.orderId)}</p>
         <div class="mt-3 space-y-0.5 text-ink-soft">
-          <p>用餐人數：<b>${record.headcount} 人</b></p>
+
           <p>總計：<b>${fmt(record.total)}</b>（含服務費）</p>
         </div>
       </div>
@@ -1297,7 +1301,7 @@ function loadOrderForEdit(orderId) {
   closeModal();
   renderAll();
   toggleCart(true);
-  toast('已載入原訂單內容，修改後按「前往填寫訂購資料」重新送出');
+  toast('已載入原訂單內容，修改後按「前往確認訂購資料」重新送出');
 }
 
 async function cancelOrder(orderId) {

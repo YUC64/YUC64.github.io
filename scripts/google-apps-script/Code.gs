@@ -35,7 +35,7 @@ const STAFF_PASSWORD = '8888';
 const STAFF_MAX_TRY = 20;        // 15 分鐘內錯超過這次數就暫時鎖住
 const ORDER_HEADERS = [
   '訂單編號', '狀態', '動作', '姓名', '電話', '預計取餐時間', '用餐人數',
-  '套餐內容', '套餐金額', '單點內容', '單點金額', '服務費', '總金額', '備註', '最後更新',
+  '套餐內容', '套餐金額', '單點內容', '單點金額', '服務費', '總金額', '備註', '車號', '最後更新',
   '修改權限',   // 員工按「開放修改」時填 open，客人改完一次自動收回
   '原始資料',   // 前端購物車 JSON（讓客人換裝置也能載回內容修改）
 ];
@@ -336,6 +336,7 @@ function doPost(e) {
     keep(num_(body.service), 11),
     keep(num_(body.total), 12),
     keep(body.note ? safe_(body.note) : '', 13),
+    keep(body.car ? safe_(body.car) : '', 14),
     now,
     action === '修改' ? '' : String((base || [])[COL_FLAG] || ''),   // 改完就收回權限
     keep(body.cart ? safe_(body.cart) : '', COL_CART),

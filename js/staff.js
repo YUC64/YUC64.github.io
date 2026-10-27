@@ -180,6 +180,7 @@
           <div><dt class="inline text-ink-mute">單點金額：</dt><dd class="inline mono">${money(o.alacarteTotal)}</dd></div>
           <div><dt class="inline text-ink-mute">服務費：</dt><dd class="inline mono">${money(o.service)}</dd></div>
           <div><dt class="inline text-ink-mute">總計：</dt><dd class="inline mono font-medium">${money(o.total)}</dd></div>
+          <div class="sm:col-span-2"><dt class="inline text-ink-mute">車號：</dt><dd class="inline font-bold">${esc(o.car) || '—'}</dd></div>
           <div class="sm:col-span-2"><dt class="inline text-ink-mute">備註：</dt><dd class="inline">${esc(o.note) || '—'}</dd></div>
           <div class="sm:col-span-2"><dt class="inline text-ink-mute">動作／更新：</dt><dd class="inline">${esc(o.action) || '—'}・${esc(o.updated) || '—'}</dd></div>
           <div class="sm:col-span-2 flex items-center gap-3 border-t border-[rgba(23,20,15,.08)] pt-3">
@@ -231,7 +232,7 @@
 
   /* ───────────────────────── 匯出 / 列印 ───────────────────────── */
   function csv() {
-    const cols = ['訂單編號', '狀態', '動作', '姓名', '電話', '用餐人數', '套餐內容', '套餐金額', '單點內容', '單點金額', '服務費', '總金額', '備註', '最後更新', '修改權限'];
+    const cols = ['訂單編號', '狀態', '動作', '姓名', '電話', '用餐人數', '套餐內容', '套餐金額', '單點內容', '單點金額', '服務費', '總金額', '備註', '車號', '最後更新', '修改權限'];
     const rows = filtered().map((o) => [
       o.orderId, o.status, o.action, o.name, o.phone, o.headcount,
       o.sets, o.setsTotal, o.alacarte, o.alacarteTotal, o.service, o.total, o.note, o.updated,
