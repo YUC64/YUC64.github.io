@@ -1476,6 +1476,13 @@ function init() {
   renderAll();
   initReveal();
   if (loggedIn()) refreshMyOrderState(false);   // 已登入就先把訂單狀態抓回來（不自動彈窗）
+  // 第一次進站先讓客人閱讀訂購說明（入口網站）
+  if (!localStorage.getItem('eatthai.v2.seenGuide')) {
+    setTimeout(() => {
+      const g = document.querySelector('[data-menu-action="guide"]');
+      if (g) { g.click(); localStorage.setItem('eatthai.v2.seenGuide', '1'); }
+    }, 700);
+  }
 }
 
 /* 頂部列：捲過封面後轉為紙色 */
