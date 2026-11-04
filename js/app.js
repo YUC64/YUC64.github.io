@@ -998,14 +998,17 @@ function renderMyOrders(list, offline) {
         <span>${o.headcount || ''}${o.headcount ? ' 人' : ''}${o.updated ? '・' + esc(o.updated) : ''}</span>
         <span class="num text-[14px] text-ink">${fmt(o.total)}</span>
       </p>
-      ${o.editable ? `
+      ${o.status === '已取消' ? `<p class="mt-3 border-t border-[rgba(23,20,15,.08)] pt-2.5 text-[10.5px] leading-relaxed text-ink-mute">
+           此訂單已取消。如需用餐，請直接在菜單重新點餐。
+         </p>`
+      : (o.editable ? `
         <div class="mt-3 grid grid-cols-2 gap-2">
           <button data-edit-order="${esc(o.orderId)}" class="btn btn-solid px-3 py-2.5 text-[10.5px]">修改內容</button>
           <button data-cancel-order="${esc(o.orderId)}" class="btn btn-line px-3 py-2.5 text-[10.5px]">取消訂單</button>
         </div>`
       : `<p class="mt-3 border-t border-[rgba(23,20,15,.08)] pt-2.5 text-[10.5px] leading-relaxed text-ink-mute">
            已送出，僅供檢視。如需更改餐點請${tel('聯繫')}，由門市為您開啟修改。
-         </p>`}
+         </p>`)}
     </div>`;
   }).join('') : `<p class="py-10 text-center text-[12px] tracking-[.16em] text-ink-mute">這支手機還沒有訂單</p>`;
 
