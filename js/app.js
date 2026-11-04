@@ -1273,7 +1273,7 @@ function showSuccess(record, delivered) {
         ${!delivered
           ? '示範模式：尚未連接門市系統，此筆訂單僅儲存在本機（請見 SETUP.md 設定後再正式收單）。'
           : record.writeMode === 'updated'
-            ? '訂單已更新到門市試算表（同一筆覆蓋，不會多出一列）。'
+            ? '訂單已更新完成。'
             : record.writeMode === 'created'
               ? '訂單已寫入門市試算表，門市將依此備餐。'
               : '訂單已送出到門市 Google 表單（修改會以新的一列記錄，門市取最新一筆）。'}
