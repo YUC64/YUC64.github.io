@@ -39,8 +39,10 @@ const ORDER_HEADERS = [
   '修改權限',   // 員工按「開放修改」時填 open，客人改完一次自動收回
   '原始資料',   // 前端購物車 JSON（讓客人換裝置也能載回內容修改）
 ];
-const COL_FLAG = 15;   // 「修改權限」欄索引
-const COL_CART = 16;   // 「原始資料」欄索引
+const COL_FLAG = ORDER_HEADERS.indexOf('修改權限');   // 依標題動態取得，避免新增欄位時錯位
+const COL_CART = ORDER_HEADERS.indexOf('原始資料');
+const COL_CAR = ORDER_HEADERS.indexOf('車號');
+const COL_UPDATED = ORDER_HEADERS.indexOf('最後更新');
 
 const RESERVATION_HEADERS = ['姓名', '電話', '驗證碼'];
 
@@ -518,7 +520,8 @@ function staffOrders_(p) {
       service: num_(r[11]),
       total: num_(r[12]),
       note: String(r[13] || '').trim(),
-      updated: String(d[14] || '').trim(),
+      updated: String(r[COL_UPDATED] || '').trim(),
+      car: String(r[COL_CAR] || '').trim(),
       editable: String(r[COL_FLAG] || '').trim() === 'open',
       src: src.tab,
     });
@@ -608,7 +611,8 @@ function myOrders_(p) {
         service: num_(r[11]),
         total: num_(r[12]),
         note: String(r[13] || '').trim(),
-        updated: tsStr_(r[14]),
+        updated: tsStr_(r[COL_UPDATED]),
+        car: String(r[COL_CAR] || '').trim(),
         editable: String(r[COL_FLAG] || '').trim() === 'open',
         cart: parseCart_(r[COL_CART]),
       });
