@@ -380,7 +380,7 @@ function alcCardHTML(item) {
   ].join(' ');
   return `<article class="card-enter group flex flex-col overflow-hidden">
     <div class="relative">
-      ${imgBlock(item.img, item.name, '🍜')}
+      ${imgBlock(item.blank ? '' : item.img, item.name, item.blank ? '' : '🍜')}
       ${inCart ? `<span class="absolute right-0 top-0 z-10 bg-ink px-2 py-1 text-[9px] tracking-[.2em] text-white">已選 ${inCart}</span>` : ''}
     </div>
     <div class="flex flex-1 flex-col px-3.5 pb-4 pt-3.5">
@@ -542,7 +542,7 @@ function alcLineHTML(line) {
   if (!item) return '';
   const key = alcKey(line);
   return `<div class="flex items-center gap-3 rounded-2xl border border-ink/10 bg-white p-3">
-    <div class="w-16 shrink-0">${imgBlock(item.img, item.name, '🍜')}</div>
+    <div class="w-16 shrink-0">${imgBlock(item.blank ? '' : item.img, item.name, item.blank ? '' : '🍜')}</div>
     <div class="min-w-0 flex-1">
       <p class="truncate text-sm font-black">${esc(item.name)} ${spicyHTML(item.name)}</p>
       <p class="mt-0.5 text-[11px] text-ink-mute">${fmt(item.price)}／份 ${line.temp ? tempChip(line.temp) : ''}${line.spicy ? tempChip(line.spicy) : ''}</p>

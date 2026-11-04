@@ -196,7 +196,7 @@ const ALC = [
 
   { id: 'a21', cat: 'veg',     name: '泰香炒野蓮', desc: '炒蛋爆香後快炒水蓮，加入魚露提味層次更豐富，清脆鹹香超夠味！',       price: 260, img: IMG('watermimosa') },
   { id: 'a22', cat: 'veg',     name: '泰炒什錦蔬菜', desc: '清炒時蔬爽脆鮮甜。【可客製茹素餐點：植物五辛素(鍋邊素)】',     price: 240, img: IMG('mixedveg') },
-  { id: 'a23', cat: 'veg',     name: '蒜香乾蝦小豆苗',   price: 350, img: IMG('peashoots') },
+  { id: 'a23', cat: 'veg',     name: '蒜香乾蝦小豆苗',   price: 350, img: '', blank: true },
 
   { id: 'a24', cat: 'soup',    name: '冬蔭海鮮湯', desc: '饗泰多特調酸辣湯汁搭配慢熬蝦高湯，各式海鮮菇類，標準山珍海味。',       price: 390, img: IMG('tomyam') },
   { id: 'a25', cat: 'soup',    name: '蝦仁玉米湯', desc: '蝦仁丁、香菇、玉米和培根一同熬煮，奶油與蛋花香氣滿溢，小朋友的最愛～',       price: 380, img: IMG('cornshrimp') },
@@ -204,7 +204,7 @@ const ALC = [
   { id: 'a27', cat: 'soup',    name: '青檸酸辣海鮮湯', desc: '以酸辣清湯為基底，融合南薑、香茅與檸檬葉燉煮海鮮與菇類，加入蝦膏風味鮮明。',   price: 420, img: IMG('sourtomsoup') },
 
   { id: 'a28', cat: 'veggie',  name: '蛋素青木瓜涼拌', desc: '【素別：蛋素(鍋邊素)】',   price: 260, img: IMG('vegsomtam'), veg: true },
-  { id: 'a29', cat: 'veggie',  name: '清炒水蓮',         price: 220, img: IMG('waterlily'), veg: true },
+  { id: 'a29', cat: 'veggie',  name: '清炒水蓮',         price: 220, img: '', blank: true, veg: true },
   { id: 'a30', cat: 'veggie',  name: '清炒什錦蔬菜', desc: '【素別：五辛素(鍋邊素)】',     price: 220, img: IMG('vegmixed'), veg: true },
   { id: 'a31', cat: 'veggie',  name: '鮮菇玉米湯', desc: '【素別：蛋奶素(鍋邊素)】',       price: 320, img: IMG('mushroomsoup'), veg: true },
   { id: 'a32', cat: 'veggie',  name: '香茅椰肉野菇湯', desc: '【素別：五辛素(鍋邊素)】',   price: 300, img: IMG('mushroomcoconut'), veg: true },
