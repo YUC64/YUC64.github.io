@@ -858,7 +858,13 @@ function toggleDrawer(on) {
 
 function doLogout() {
   S.user = null;
+  S.orders = [];            // 清掉本機暫存的訂單，避免登出後還看得到
+  S.hasOrder = false;
+  S.editing = null;
+  S.cart = { sets: [], alc: [] };
   save(LS.user, null);
+  save(LS.orders, []);
+  save(LS.cart, S.cart);
   closeDrawer();
   toggleCart(false);
   renderAll();
@@ -955,6 +961,7 @@ async function fetchMine() {
 }
 
 function localAsMine() {
+  if (!S.user) return [];
   return S.orders.filter((o) => o.phone === S.user.phone).map((o) => ({
     orderId: o.orderId, status: o.status, name: o.name, headcount: o.headcount,
     sets: o.summary, total: o.total, updated: '',
@@ -963,6 +970,7 @@ function localAsMine() {
 }
 
 function openMyOrders() {
+  if (!loggedIn()) { openLogin(); toast('請先登入才能查看您的點餐'); return; }
   if (!S.user) return openLogin();
   openModal(`<div class="px-6 py-16 text-center text-[12px] tracking-[.22em] text-ink-mute">載入訂單中…</div>`);
   loadMyOrders();
