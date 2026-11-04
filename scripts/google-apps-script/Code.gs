@@ -520,7 +520,7 @@ function staffOrders_(p) {
       service: num_(r[11]),
       total: num_(r[12]),
       note: String(r[13] || '').trim(),
-      updated: String(r[COL_UPDATED] || '').trim(),
+      updated: tsStr_(r[COL_UPDATED]),
       car: String(r[COL_CAR] || '').trim(),
       editable: String(r[COL_FLAG] || '').trim() === 'open',
       src: src.tab,
@@ -565,14 +565,19 @@ function staffSetEdit_(p) {
   const open = String(p.open || '') === '1';
   if (!oid) return jsonOut({ ok: false, error: 'no_order_id' });
 
-  const sh = orderSheet_().getSheetByName(ORDER_TAB);
-  const last = sh ? sh.getLastRow() : 0;
-  if (last < 2) return jsonOut({ ok: false, error: 'order_not_found' });
-  const rows = sh.getRange(2, 1, last - 1, ORDER_HEADERS.length).getValues();
-  for (let i = rows.length - 1; i >= 0; i--) {
-    if (String(rows[i][0] || '').trim() === oid) {
-      sh.getRange(i + 2, COL_FLAG + 1).setValues([[open ? 'open' : '']]);
-      return jsonOut({ ok: true, orderId: oid, editable: open, row: i + 2 });
+  const ss = orderSheet_();
+  const tabs = [ORDER_TAB, ARCHIVE_TAB];   // 主表找不到就找「已取消」分頁
+  for (let t = 0; t < tabs.length; t++) {
+    const sh = ss.getSheetByName(tabs[t]);
+    if (!sh) continue;
+    const last = sh.getLastRow();
+    if (last < 2) continue;
+    const rows = sh.getRange(2, 1, last - 1, ORDER_HEADERS.length).getValues();
+    for (let i = rows.length - 1; i >= 0; i--) {
+      if (String(rows[i][0] || '').trim() === oid) {
+        sh.getRange(i + 2, COL_FLAG + 1).setValues([[open ? 'open' : '']]);
+        return jsonOut({ ok: true, orderId: oid, editable: open, row: i + 2, tab: tabs[t] });
+      }
     }
   }
   return jsonOut({ ok: false, error: 'order_not_found' });

@@ -81,6 +81,7 @@ async function refreshMyOrderState(autoOpen) {
   // 右上按鈕文字：已送出 → 我的訂單
   const lbl = document.querySelector('#btnCartTop [data-top-label]');
   if (lbl) lbl.textContent = S.hasOrder ? '我的點餐' : '訂單';
+  renderSets();                                  // 讓套餐卡按鈕同步（已送出 → 觀看菜色）
   if (S.hasOrder && autoOpen) openMyOrders();
 }
 
@@ -332,7 +333,7 @@ function syncDraftUI() {
     } else if (!mild && tag) {
       tag.remove();
     }
-    b.querySelectorAll('svg').forEach((svg) => { svg.style.display = mild ? 'none' : ''; });
+    b.querySelectorAll('svg, img').forEach((el) => { el.style.display = mild ? 'none' : ''; });
   });
 
   $$('[data-upgrade]').forEach((b) => b.classList.toggle('on', S.draft.upgrades.includes(b.dataset.upgrade)));
@@ -936,7 +937,7 @@ function renderMember() {
       <a href="#sets" data-drawer-close class="flex items-center justify-between border-b border-[rgba(23,20,15,.08)] py-3.5 text-[12.5px] tracking-[.12em] transition hover:text-gold">春節多人套餐 <span class="text-ink-mute">›</span></a>
       <a href="#alacarte" data-drawer-close class="flex items-center justify-between border-b border-[rgba(23,20,15,.08)] py-3.5 text-[12.5px] tracking-[.12em] transition hover:text-gold">單點加點 <span class="text-ink-mute">›</span></a>
       <button data-menu-action="guide" class="flex w-full items-center justify-between border-b border-[rgba(23,20,15,.08)] py-3.5 text-left text-[12.5px] tracking-[.12em] transition hover:text-gold">訂購說明 <span class="text-ink-mute">›</span></button>
-      <button data-menu-action="cart" class="flex w-full items-center justify-between border-b border-[rgba(23,20,15,.08)] py-3.5 text-left text-[12.5px] tracking-[.12em] transition hover:text-gold">訂單內容 <span class="text-ink-mute">›</span></button>
+      ${loggedIn() ? `<button data-menu-action="cart" class="flex w-full items-center justify-between border-b border-[rgba(23,20,15,.08)] py-3.5 text-left text-[12.5px] tracking-[.12em] transition hover:text-gold">訂單內容 <span class="text-ink-mute">›</span></button>` : ''}
     </nav>
     <div class="mt-7 border-t border-[rgba(23,20,15,.12)] pt-5 text-[10.5px] leading-[2] tracking-[.06em] text-ink-mute">
       <p class="caps mb-2.5">Notice</p>
@@ -1209,7 +1210,7 @@ async function submitOrder(ev) {
         headcount: c.headcount,
         sets: setLines.join(' ｜ '), setsTotal: c.setsSubtotal,
         alacarte: alcLines.join('、'), alacarteTotal: c.alcSubtotal,
-        service: c.service, total: c.total, note: values.note, ts: values.ts,
+        service: c.service, total: c.total, note: values.note, car: car || '', ts: values.ts,
         cart: JSON.stringify(S.cart),
       });
       delivered = true;
@@ -1351,7 +1352,10 @@ function bindEvents() {
       if (d.menuAction === 'logout') return doLogout();
       if (d.menuAction === 'orders') return openMyOrders();
       if (d.menuAction === 'guide') return openGuide();
-      if (d.menuAction === 'cart') return toggleCart(true);
+      if (d.menuAction === 'cart') {
+      if (!loggedIn()) { openLogin(); return toast('請先登入才能查看您的點餐', 2600); }
+      return toggleCart(true);
+    }
       return;
     }
 

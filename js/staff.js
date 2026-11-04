@@ -235,7 +235,7 @@
     const cols = ['訂單編號', '狀態', '動作', '姓名', '電話', '用餐人數', '套餐內容', '套餐金額', '單點內容', '單點金額', '服務費', '總金額', '備註', '車號', '最後更新', '修改權限'];
     const rows = filtered().map((o) => [
       o.orderId, o.status, o.action, o.name, o.phone, o.headcount,
-      o.sets, o.setsTotal, o.alacarte, o.alacarteTotal, o.service, o.total, o.note, o.updated,
+      o.sets, o.setsTotal, o.alacarte, o.alacarteTotal, o.service, o.total, o.note, o.car, o.updated,
       o.editable ? '已開放' : '',
     ]);
     const q = (v) => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`;
