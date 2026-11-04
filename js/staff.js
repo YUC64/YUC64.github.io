@@ -202,6 +202,8 @@
   }
 
   function render(fresh = []) {
+    const ssel = document.getElementById('sortBy');
+    if (ssel) ssel.value = S.sort;   // 選單顯示要與實際排序一致
     renderTabs();
     const list = filtered();
 
