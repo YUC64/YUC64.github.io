@@ -234,7 +234,7 @@ function openSetConfig(setId, editLine = null) {
             <p class="text-[11px] font-bold" data-counter="${g.key}"></p>
           </div>
           <div class="mt-2 flex flex-wrap gap-1.5">
-            ${g.options.map((o) => `<button class="chip" data-pick="${g.key}" data-value="${esc(o)}">${esc(o)}${spicyHTML(o)}</button>`).join('')}
+            ${g.options.map((o) => `<button class="chip" data-pick="${g.key}" data-value="${esc(o)}">${esc(o)}${spicyHTML(o)}<span class="ml-1 hidden text-[9.5px] font-black" data-count></span>${g.pick > 1 ? '<span data-unpick class="ml-1 hidden grid h-4 w-4 place-items-center rounded-full bg-ink/10 text-[10px] leading-none">−</span>' : ''}</button>`).join('')}
           </div>
         </div>`).join('')}
       <div id="mildBox"></div>
@@ -310,7 +310,14 @@ function syncDraftUI() {
     c.textContent = chosen.length === g.pick ? `已選 ${chosen.length}／${g.pick} ✓` : `還需 ${g.pick - chosen.length} 道`;
     c.className = `text-[11px] font-bold ${chosen.length === g.pick ? 'text-thai-green'
       : (S.draft.tried === true ? 'text-thai-red' : 'text-ink-mute')}`;
-    $$(`[data-pick="${g.key}"]`).forEach((b) => b.classList.toggle('on', chosen.includes(b.dataset.value)));
+    $$(`[data-pick="${g.key}"]`).forEach((b) => {
+      const n = chosen.filter((x) => x === b.dataset.value).length;
+      b.classList.toggle('on', n > 0);
+      const cnt = b.querySelector('[data-count]');
+      if (cnt) { cnt.textContent = n > 1 ? `×${n}` : ''; cnt.classList.toggle('hidden', n < 2); }
+      const minus = b.querySelector('[data-unpick]');
+      if (minus) minus.classList.toggle('hidden', n < 1);
+    });
   });
 
   const drinksOK = S.draft.drinks.every((d) => d.name);
@@ -489,6 +496,13 @@ function askMild(name, anchor) {
   }, 0);
 }
 
+/* 同一道菜選多份 → 合併成 [名稱, 份數] */
+function collapsePicks(arr) {
+  const map = new Map();
+  (arr || []).filter(Boolean).forEach((nm) => map.set(nm, (map.get(nm) || 0) + 1));
+  return [...map.entries()];
+}
+
 function addAlcLine(itemId, temp, spicy) {
   const item = ALC.find((a) => a.id === itemId);
   const line = S.cart.alc.find((l) => l.id === itemId && (l.temp || '') === (temp || '') && (l.spicy || '') === (spicy || ''));
@@ -503,10 +517,13 @@ function setLineHTML(line) {
   const def = SETS.find((s) => s.id === line.setId);
   if (!def) return '';
   const groups = def.groups.map((g) => {
-    const picked = (line.picks[g.key] || []).map((p) => (line.mild || {})[p]
-      ? esc(p) + '<span class="text-[9.5px] tracking-[.1em] text-gold">（不辣）</span>'
-      : esc(p) + spicyHTML(p)).join('、') || '—';
-    return `<li><b>${esc(g.label)}：</b>${picked}</li>`;
+    const pickedLine = collapsePicks(line.picks[g.key] || []).map(([p, n]) => {
+      const base = (line.mild || {})[p]
+        ? esc(p) + '<span class="text-[9.5px] tracking-[.1em] text-gold">（不辣）</span>'
+        : esc(p) + spicyHTML(p);
+      return base + (n > 1 ? `<span class="text-[9.5px] text-ink-mute">×${n}</span>` : '');
+    }).join('、') || '—';
+    return `<li><b>${esc(g.label)}：</b>${pickedLine}</li>`;
   }).join('');
   const drinks = (Array.isArray(line.drinks) ? line.drinks : [])
     .map((d) => `${esc(d.name)}${d.temp ? `(${esc(d.temp)})` : ''}`).join('、') || '—';
@@ -1133,8 +1150,8 @@ function buildSummary() {
     const rows = [`${def.name} ×${line.qty}`];
     // 每個選項類別各一行，門市一眼看出客人選了什麼
     def.groups.forEach((g) => {
-      const chosen = (line.picks[g.key] || []).filter(Boolean);
-      rows.push(`　${g.label}：${chosen.length ? chosen.map((nm) => (line.mild && line.mild[nm] ? nm + '（不辣）' : nm)).join('、') : '—'}`);
+      const chosen = collapsePicks(line.picks[g.key] || []);
+      rows.push(`　${g.label}：${chosen.length ? chosen.map(([nm, n]) => (line.mild && line.mild[nm] ? nm + '（不辣）' : nm) + (n > 1 ? ` ×${n}` : '')).join('、') : '—'}`);
     });
     const drinks = (line.drinks || []).filter((d) => d.name)
       .map((d) => `${d.name}${d.temp ? `（${d.temp}）` : ''}`);
@@ -1363,13 +1380,25 @@ function bindEvents() {
       const g = SETS.find((s) => s.id === S.draft.setId).groups.find((x) => x.key === d.pick);
       const arr = S.draft.picks[d.pick];
       const i = arr.indexOf(d.value);
-      const nowOn = i < 0;
-      if (i >= 0) arr.splice(i, 1);
+      const clickedMinus = !!e.target.closest('[data-unpick]');
+      let added = false;
+      if (g.pick > 1) {
+        // 選 N（N≥2）：同一道可選多份；「−」減一份，選滿後再點同一道也會減一份
+        if (clickedMinus) { if (i >= 0) arr.splice(i, 1); }
+        else if (i >= 0) {
+          if (arr.length < g.pick) {
+            const had = arr.filter((x) => x === d.value).length;
+            arr.push(d.value); added = true;
+            toast(`「${d.value}」已加入第 ${had + 1} 份`);
+          } else arr.splice(i, 1);
+        } else if (arr.length < g.pick) { arr.push(d.value); added = true; }
+        else { arr.shift(); arr.push(d.value); added = true; toast(`「${g.label}」最多選 ${g.pick} 道，已自動替換`); }
+      } else if (i >= 0) arr.splice(i, 1);
       else if (arr.length < g.pick) arr.push(d.value);
       else { arr.shift(); arr.push(d.value); toast(`「${g.label}」最多選 ${g.pick} 道，已自動替換`); }
       syncDraftUI();
       // 辣菜：直接在點的位置彈出「正常／不辣」
-      if (nowOn && canNoSpicy(d.value)) {
+      if (added && canNoSpicy(d.value)) {
         askMild(d.value, document.querySelector(`[data-pick="${d.pick}"][data-value="${d.value}"]`));
       }
       return;
