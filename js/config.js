@@ -15,7 +15,7 @@ window.CONFIG = {
   },
 
   orders: {
-    // 春節期間訂單截止時間（ISO，超過就不再收單；設 null 表示不限制）
+    // 除夕內用訂單截止時間（ISO，超過就不再收單；設 null 表示不限制）
     deadline: '2027-02-14T23:59:00+08:00',
     // 預計取餐時段的候選時段
     timeSlots: [
@@ -29,9 +29,9 @@ window.CONFIG = {
   },
 
   rules: {
-    // PDF：「春節期間限點選任一春節多人套餐，方能進行單點加點。」
+    // PDF：「除夕內用限點選任一春節多人套餐，方能進行單點加點。」
     requireSetBeforeAlcarte: true,
-    // PDF：「春節期間本店需加收 10% 服務費」
+    // PDF：「除夕內用本店需加收 10% 服務費」
     serviceChargeRate: 0.1,
     // PDF：「每人最低消費 $600」
     minSpendPerPerson: 600,

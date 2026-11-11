@@ -413,7 +413,7 @@ function renderAlc() {
   const hint = $('#alcHint');
   if (hint) {
     hint.textContent = (alcLocked() && loggedIn())
-      ? '春節期間單點需搭配套餐，選好套餐後即可加點'
+      ? '除夕內用單點需搭配套餐，選好套餐後即可加點'
       : '菜色與價格一覽';
   }
 }
@@ -959,7 +959,7 @@ function renderMember() {
     <div class="mt-7 border-t border-[rgba(23,20,15,.12)] pt-5 text-[10.5px] leading-[2] tracking-[.06em] text-ink-mute">
       <p class="caps mb-2.5">Notice</p>
       <p>・內用加收 10% 服務費・每人最低消費 $600</p>
-      <p>・春節期間須先點選任一春節多人套餐，才能單點加點</p>
+      <p>・除夕內用須先點選任一春節多人套餐，才能單點加點</p>
       <p>・送出後僅供檢視；如需更改請聯繫門市為您開啟修改</p>
       <p>・不含線上結帳，款項請於現場結清</p>
       ${CFG.brand.phone ? `<p class="mt-2 font-bold text-ink-soft">訂購專線 ${esc(CFG.brand.phone)}</p>` : ''}
