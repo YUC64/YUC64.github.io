@@ -1114,10 +1114,16 @@ function openCheckout() {
                  class="field">
         </label>
       </div>
-      <label class="block">
-        <span class="field-label">車號 <span class="text-ink-mute">（停車場登記用，騎車或未開車可留空）</span></span>
-        <input name="car" maxlength="12" placeholder="例：ABC-1234" class="field" value="">
-      </label>
+      <div class="block">
+        <span class="field-label">車號 <span class="text-ink-mute">（停車場登記用，可填多張；騎車或未開車可留空）</span></span>
+        <div id="carList" class="mt-1 space-y-2">
+          <div class="flex items-center gap-2" data-car-row>
+            <input name="car" maxlength="12" placeholder="例：ABC-1234" class="field flex-1" value="">
+            <button type="button" data-car-add title="增加一台車"
+              class="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-[rgba(23,20,15,.2)] text-[15px] leading-none transition hover:bg-ink hover:text-white">＋</button>
+          </div>
+        </div>
+      </div>
       <label class="block">
         <span class="field-label">備註</span>
         <textarea name="note" rows="2" class="field"></textarea>
@@ -1139,7 +1145,32 @@ function openCheckout() {
       </button>
       <p class="text-center text-[9.5px] tracking-[.16em] text-ink-mute">本頁不含線上付款・款項請於現場結清</p>
     </form>`, {
-    onMount: (root) => { $('#orderForm', root).addEventListener('submit', submitOrder); },
+    onMount: (root) => {
+      const form = $('#orderForm', root);
+      form.addEventListener('submit', submitOrder);
+      form.addEventListener('click', (e) => {
+        if (e.target.closest('[data-car-add]')) {
+          e.preventDefault();
+          const list = $('#carList', root);
+          if (list.querySelectorAll('[data-car-row]').length >= 5) return toast('最多 5 台車', 2200);
+          const row = document.createElement('div');
+          row.setAttribute('data-car-row', '');
+          row.className = 'flex items-center gap-2';
+          row.innerHTML = `<input name="car" maxlength="12" placeholder="例：ABC-1234" class="field flex-1" value="">
+            <button type="button" data-car-del title="移除這台車"
+              class="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-[rgba(23,20,15,.2)] text-[15px] leading-none transition hover:bg-ink hover:text-white">−</button>`;
+          list.appendChild(row);
+          const inp = row.querySelector('input');
+          if (inp) inp.focus();
+          return;
+        }
+        if (e.target.closest('[data-car-del]')) {
+          e.preventDefault();
+          const row = e.target.closest('[data-car-row]');
+          if (row) row.remove();
+        }
+      });
+    },
   });
 }
 
@@ -1181,7 +1212,10 @@ async function submitOrder(ev) {
   const name = f.name.value.trim();
   const phone = f.phone.value.replace(/\D/g, '');
   const note = f.note.value.trim();
-  const car = f.car.value.trim();
+  const car = [...f.querySelectorAll('[name="car"]')]
+    .map((el) => (el.value || '').trim())
+    .filter(Boolean)
+    .join('、');
 
   if (!name) return toast('請填寫姓名');
   if (!/^09\d{8}$/.test(phone)) return toast('電話格式錯誤（09 開頭共 10 碼）');
