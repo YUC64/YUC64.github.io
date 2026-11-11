@@ -202,6 +202,7 @@
   }
 
   function render(fresh = []) {
+    window.__staffOrders = S.orders || [];   // 供內場出單讀取
     const ssel = document.getElementById('sortBy');
     if (ssel) ssel.value = S.sort;   // 選單顯示要與實際排序一致
     renderTabs();
