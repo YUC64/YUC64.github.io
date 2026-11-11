@@ -148,16 +148,21 @@
 
   /* ── 按鈕：掛在員工看板標題列 ── */
   function mountBtn() {
-    if (document.getElementById('btnKitchen')) return;
-    const bar = document.querySelector('header .flex') || document.querySelector('header');
-    if (!bar) return;
+    const old = document.getElementById('btnKitchen');
+    const host = document.getElementById('btnExport');        // 掛在「匯出 CSV」旁邊（一定在員工看板內）
+    const fallback = document.getElementById('btnRefresh');
+    const anchor = host || fallback;
+    if (!anchor) return;
+    if (old && old.parentElement === anchor.parentElement) return;   // 已經在同一列
+    if (old) old.remove();
     const btn = document.createElement('button');
     btn.id = 'btnKitchen';
     btn.type = 'button';
-    btn.className = 'btn btn-solid px-3 py-2 text-[11px]';
+    btn.className = 'btn btn-line px-3.5 py-1.5 text-[10px]';
     btn.textContent = '內場出單';
     btn.addEventListener('click', open);
-    bar.insertBefore(btn, bar.firstChild);
+    if (host) host.parentElement.insertBefore(btn, host);
+    else anchor.parentElement.insertBefore(btn, anchor.nextSibling);
   }
 
   function css() {
@@ -200,5 +205,6 @@
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => { css(); mountBtn(); });
   else { css(); mountBtn(); }
+  setInterval(mountBtn, 1500);   // 登入後看板才出現，持續確保按鈕掛在正確位置
   window.kitchenOpen = open;
 })();
