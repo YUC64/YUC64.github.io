@@ -226,7 +226,7 @@ function openSetConfig(setId, editLine = null) {
     <div class="space-y-4 px-4 py-4">
       <div class="rounded-2xl border border-brand-deep bg-brand/15 p-3 text-[12px] leading-relaxed text-ink-soft">
         <b class="text-ink">套餐特選（隨餐附贈）</b><br><span id="fixedItems">${def.fixed.map((f) => esc(f) + ((S.draft.mild || {})[f] ? '<span class="text-[9.5px] tracking-[.1em] text-gold">（不辣）</span>' : '') + spicyHTML(f)).join('、')}</span>
-      ${(def.fixed || []).filter(canNoSpicy).length ? `<p class="mt-1.5 text-[11px] text-ink-mute">特選辣度（可選不辣）：</p>
+      ${(def.fixed || []).filter(canNoSpicy).length ? `<p class="mt-1.5 text-[11px] text-ink-mute">這幾道可改不辣：</p>
       <div class="mt-1 flex flex-wrap gap-1.5">
         ${def.fixed.filter(canNoSpicy).map((f) => `<button class="chip ${(S.draft.mild || {})[f] ? 'on' : ''}" data-fixedmild="${esc(f)}">${esc(f)} 不辣</button>`).join('')}
       </div>` : ''}
@@ -577,7 +577,7 @@ function alcLineHTML(line) {
   return `<div class="flex items-center gap-3 rounded-2xl border border-ink/10 bg-white p-3">
     <div class="w-16 shrink-0">${imgBlock(item.blank ? '' : item.img, item.name, item.blank ? '' : '🍜')}</div>
     <div class="min-w-0 flex-1">
-      <p class="truncate text-sm font-black">${esc(item.name)} ${spicyHTML(item.name)}</p>
+      <p class="truncate text-sm font-black">${esc(item.name)} ${spicyHTML(item.name)}${canNoSpicy(item.name) ? '<span class="ml-1.5 align-[1px] text-[9px] tracking-[.08em] text-gold">可改不辣</span>' : ''}</p>
       <p class="mt-0.5 text-[11px] text-ink-mute">${fmt(item.price)}／份 ${line.temp ? tempChip(line.temp) : ''}${line.spicy ? tempChip(line.spicy) : ''}</p>
       <div class="mt-1.5 flex items-center gap-2">
         <button class="qty-btn" data-qty-alc="${esc(key)}" data-delta="-1">−</button>
