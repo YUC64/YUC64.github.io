@@ -64,6 +64,24 @@ const loggedIn = () => !!S.user;
 
 /* 是否已經送出過訂單（送出後只能檢視，要門市開放才能改） */
 const hasOrder = () => S.hasOrder === true;
+/* 門市已開放修改（存在可編輯的進行中訂單）→ 不視為鎖定 */
+const editableNow = () => (S.myOrders || []).some((o) => o.editable && o.status !== '已取消');
+const lockedNow = () => hasOrder() && !editableNow();
+/* 同一訂單編號只留一筆（避免取消後重複列） */
+function dedupeOrders(arr) {
+  const seen = {}; const out = [];
+  (arr || []).forEach((o) => {
+    const k = String(o && o.orderId || '').trim();
+    if (!k) { out.push(o); return; }
+    const prev = seen[k];
+    if (!prev) { seen[k] = o; out.push(o); }
+    else if (o.status === '已取消' && prev.status !== '已取消') {
+      const i = out.indexOf(prev); if (i >= 0) out[i] = o;
+      seen[k] = o;
+    }
+  });
+  return out;
+}
 function localHasOrder() {
   if (!S.user) return false;
   return S.orders.some((o) => o.phone === S.user.phone && o.status !== '取消訂單');
@@ -271,7 +289,8 @@ function openSetConfig(setId, editLine = null) {
         if (d.drinkslot !== undefined) {
           const i = Number(d.drinkslot);
           const name = e.target.value;
-          S.draft.drinks[i] = { name, temp: tempsOf(name)[0] || '' };
+          const keepTemp = (tempsOf(name).indexOf((S.draft.drinks[i] || {}).temp) >= 0) ? S.draft.drinks[i].temp : (tempsOf(name)[0] || '');
+          S.draft.drinks[i] = { name, temp: keepTemp };
           $('[data-group="drink"]', root).querySelector('div.mt-2.space-y-2').innerHTML = drinkSlotsHTML();
           syncDraftUI();
         }
@@ -361,7 +380,7 @@ function syncDraftUI() {
   $$('[data-upgrade]').forEach((b) => b.classList.toggle('on', S.draft.upgrades.includes(b.dataset.upgrade)));
 
   const btn = $('[data-add-set]');
-  if (hasOrder()) {
+  if (lockedNow()) {
     btn.disabled = true;
     btn.className = 'btn btn-line is-disabled w-full text-[11.5px]';
     btn.textContent = '已送出訂單・需門市開放才能修改';
@@ -477,7 +496,7 @@ function openTempPicker(itemId) {
       $('#btnTempAdd', root).addEventListener('click', () => {
         closeModal();
         if (needLogin()) return;
-        if (hasOrder()) return toast('您已送出訂單，如需更改請聯繫門市開通修改', 3600);
+        if (lockedNow()) return toast('您已送出訂單，如需更改請聯繫門市開通修改', 3600);
         addAlcLine(itemId, chosen, mild ? '不辣' : '');
       });
     },
@@ -577,7 +596,9 @@ function alcLineHTML(line) {
   return `<div class="flex items-center gap-3 rounded-2xl border border-ink/10 bg-white p-3">
     <div class="w-16 shrink-0">${imgBlock(item.blank ? '' : item.img, item.name, item.blank ? '' : '🍜')}</div>
     <div class="min-w-0 flex-1">
-      <p class="truncate text-sm font-black">${esc(item.name)} ${spicyHTML(item.name)}${canNoSpicy(item.name) ? '<span class="ml-1.5 align-[1px] text-[9px] tracking-[.08em] text-gold">可改不辣</span>' : ''}</p>
+      <p class="truncate text-sm font-black">${esc(item.name)} ${line.spicy
+        ? '<span class="text-[9.5px] tracking-[.08em] text-gold">（不辣）</span>'
+        : spicyHTML(item.name)}${(!line.spicy && canNoSpicy(item.name)) ? '<span class="ml-1.5 align-[1px] text-[9px] tracking-[.08em] text-gold">可改不辣</span>' : ''}</p>
       <p class="mt-0.5 text-[11px] text-ink-mute">${fmt(item.price)}／份 ${line.temp ? tempChip(line.temp) : ''}${line.spicy ? tempChip(line.spicy) : ''}</p>
       <div class="mt-1.5 flex items-center gap-2">
         <button class="qty-btn" data-qty-alc="${esc(key)}" data-delta="-1">−</button>
@@ -1443,8 +1464,8 @@ function bindEvents() {
         } else if (arr.length < g.pick) { arr.push(d.value); added = true; }
         else { arr.shift(); arr.push(d.value); added = true; toast(`「${g.label}」最多選 ${g.pick} 道，已自動替換`); }
       } else if (i >= 0) arr.splice(i, 1);
-      else if (arr.length < g.pick) arr.push(d.value);
-      else { arr.shift(); arr.push(d.value); toast(`「${g.label}」最多選 ${g.pick} 道，已自動替換`); }
+      else if (arr.length < g.pick) { arr.push(d.value); added = true; }
+      else { arr.shift(); arr.push(d.value); added = true; toast(`「${g.label}」最多選 ${g.pick} 道，已自動替換`); }
       syncDraftUI();
       // 辣菜：直接在點的位置彈出「正常／不辣」
       if (added && canNoSpicy(d.value)) {
@@ -1466,7 +1487,7 @@ function bindEvents() {
       return syncDraftUI();
     }
     if (d.addSet !== undefined) {
-      if (hasOrder()) { closeModal(); return toast('您已送出訂單，如需更改請聯繫門市開通修改', 3600); }
+      if (lockedNow()) { closeModal(); return toast('您已送出訂單，如需更改請聯繫門市開通修改', 3600); }
       if (!draftComplete()) {
         S.draft.tried = true;
         syncDraftUI();
@@ -1483,7 +1504,7 @@ function bindEvents() {
     }
     if (d.addAlc !== undefined) {
       if (needLogin('請先登入才能選購餐點')) return;
-      if (hasOrder()) return toast('您已送出訂單，如需更改請聯繫門市開通修改', 3600);
+      if (lockedNow()) return toast('您已送出訂單，如需更改請聯繫門市開通修改', 3600);
       if (alcLocked()) return toast('請先選擇一份春節套餐才能加點單點');
       const item = ALC.find((a) => a.id === d.addAlc);
       if (tempsOf(item.name).length || canNoSpicy(item.name)) return openTempPicker(d.addAlc);

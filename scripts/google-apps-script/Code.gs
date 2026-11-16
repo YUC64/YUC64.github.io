@@ -364,7 +364,7 @@ function doPost(e) {
     keep(body.note ? safe_(body.note) : '', 13),
     keep(body.car ? safe_(body.car) : '', 14),
     now,
-    action === '修改' ? '' : String((base || [])[COL_FLAG] || ''),   // 改完就收回權限
+    (action === '修改' || action === '取消') ? '' : String((base || [])[COL_FLAG] || ''),   // 改完／取消就收回權限
     keep(body.cart ? safe_(body.cart) : '', COL_CART),
   ];
 

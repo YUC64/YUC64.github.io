@@ -125,6 +125,22 @@
     { key: '已取消', label: '已取消' },
   ];
 
+  /* 同一訂單編號只留一筆（已取消的優先），避免重複列 */
+  function dedupe(arr) {
+    const seen = {}; const out = [];
+    (arr || []).forEach((o) => {
+      const k = String(o && o.orderId || '').trim();
+      if (!k) { out.push(o); return; }
+      const prev = seen[k];
+      if (!prev) { seen[k] = o; out.push(o); }
+      else if (o.status === '已取消' && prev.status !== '已取消') {
+        const i = out.indexOf(prev); if (i >= 0) out[i] = o;
+        seen[k] = o;
+      }
+    });
+    return out;
+  }
+
   function renderTabs() {
     $('#tabs').innerHTML = TABS.map((t) => `
       <button data-tab="${esc(t.key)}" class="tab ${S.filter === t.key ? 'on' : ''}">${esc(t.label)}</button>`).join('');
@@ -187,10 +203,10 @@
             <span class="text-[11px] ${o.editable ? 'font-medium text-thai-green' : 'text-ink-mute'}">
               修改權限：${o.editable ? '已開放（客人可改一次）' : '未開放'}
             </span>
-            <button data-toggle-edit="${esc(o.orderId)}" data-open="${o.editable ? '0' : '1'}"
+            ${o.status === '已取消' ? '' : `<button data-toggle-edit="${esc(o.orderId)}" data-open="${o.editable ? '0' : '1'}"
               class="ml-auto border border-[rgba(23,20,15,.22)] px-3 py-1.5 text-[10.5px] tracking-[.1em] transition hover:bg-ink hover:text-white">
               ${o.editable ? '收回權限' : '開放修改'}
-            </button>
+            </button>`}
             <button data-del-order="${esc(o.orderId)}"
               class="border border-thai-red/40 px-3 py-1.5 text-[10.5px] tracking-[.1em] text-thai-red transition hover:bg-thai-red hover:text-white">
               刪除訂單
@@ -206,7 +222,7 @@
     const ssel = document.getElementById('sortBy');
     if (ssel) ssel.value = S.sort;   // 選單顯示要與實際排序一致
     renderTabs();
-    const list = filtered();
+    const list = dedupe(filtered());
 
     // KPI（以全部資料計算，不受篩選影響）
     const live = S.orders.filter((o) => !isCancelled(o));
