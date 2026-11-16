@@ -162,6 +162,24 @@ function fillCodes_(report) {
 }
 
 /** 訂單表：建立／確認欄位，回傳網址 */
+/** 一次性修復：標題列缺少「車號」時，自動在「最後更新」左邊插入一欄（不影響既有資料） */
+function fixOrderSheetHeaders() {
+  const sh = orderSheet_().getSheetByName(ORDER_TAB);
+  if (!sh) return '找不到訂單分頁';
+  const lastCol = Math.max(sh.getLastColumn(), ORDER_HEADERS.length);
+  const hdr = sh.getRange(1, 1, 1, lastCol).getValues()[0].map((v) => String(v || '').trim());
+  if (hdr.indexOf('車號') >= 0) {
+    Logger.log('✅ 標題列已有「車號」，不需修改');
+    return 'ok: 已有車號欄';
+  }
+  const upd = hdr.indexOf('最後更新');
+  const at = upd >= 0 ? upd + 1 : 15;          // 插在「最後更新」左邊
+  sh.insertColumnBefore(at);
+  sh.getRange(1, at).setValue('車號').setFontWeight('bold').setBackground('#FFD400');
+  Logger.log('✅ 已在第 ' + at + ' 欄插入「車號」');
+  return 'ok: 已插入車號欄（第 ' + at + ' 欄）';
+}
+
 function setupOrderSheet(report) {
   const props = PropertiesService.getScriptProperties();
   let ss = null;
@@ -185,6 +203,9 @@ function setupOrderSheet(report) {
     report.push('🔄 訂單表標題列已重設');
   } else {
     report.push('✅ 訂單表欄位正常');
+  }
+  if (String(sh.getRange(1, 15).getValue() || '').trim() !== '車號') {
+    try { fixOrderSheetHeaders(); } catch (e) {}
   }
   sh.getRange(1, 1, 1, ORDER_HEADERS.length).setFontWeight('bold').setBackground('#FFD400');
   sh.setFrozenRows(1);
