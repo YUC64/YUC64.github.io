@@ -225,7 +225,7 @@ function openSetConfig(setId, editLine = null) {
     </div>
     <div class="space-y-4 px-4 py-4">
       <div class="rounded-2xl border border-brand-deep bg-brand/15 p-3 text-[12px] leading-relaxed text-ink-soft">
-        <b class="text-ink">套餐特選（隨餐附贈）</b><br>${def.fixed.map((f) => esc(f) + ((S.draft.mild || {})[f] ? '<span class="text-[9.5px] tracking-[.1em] text-gold">（不辣）</span>' : '') + spicyHTML(f)).join('、')}
+        <b class="text-ink">套餐特選（隨餐附贈）</b><br><span id="fixedItems">${def.fixed.map((f) => esc(f) + ((S.draft.mild || {})[f] ? '<span class="text-[9.5px] tracking-[.1em] text-gold">（不辣）</span>' : '') + spicyHTML(f)).join('、')}</span>
       ${(def.fixed || []).filter(canNoSpicy).length ? `<p class="mt-1.5 text-[11px] text-ink-mute">特選辣度（可選不辣）：</p>
       <div class="mt-1 flex flex-wrap gap-1.5">
         ${def.fixed.filter(canNoSpicy).map((f) => `<button class="chip ${(S.draft.mild || {})[f] ? 'on' : ''}" data-fixedmild="${esc(f)}">${esc(f)} 不辣</button>`).join('')}
@@ -332,6 +332,17 @@ function syncDraftUI() {
   dc.textContent = drinksOK ? `已選 ${S.draft.drinks.length}／${def.drinkPick} ✓` : `還需 ${def.drinkPick - S.draft.drinks.filter((d) => d.name).length} 杯`;
   dc.className = `text-[11px] font-bold ${drinksOK ? 'text-thai-green'
     : (S.draft.tried === true ? 'text-thai-red' : 'text-ink-mute')}`;
+
+  // 套餐特選（隨餐附贈）的不辣狀態
+  $$('[data-fixedmild]').forEach((b) => {
+    b.classList.toggle('on', !!((S.draft.mild || {})[b.dataset.fixedmild]));
+  });
+  const fx = $('#fixedItems');
+  if (fx && def) {
+    fx.innerHTML = (def.fixed || []).map((f) => esc(f)
+      + ((S.draft.mild || {})[f] ? '<span class="text-[9.5px] tracking-[.1em] text-gold">（不辣）</span>' : '')
+      + spicyHTML(f)).join('、');
+  }
 
   // 選了不辣：菜名按鈕上的辣椒拿掉，改成（不辣）
   $$('#modalBox [data-pick]').forEach((b) => {
