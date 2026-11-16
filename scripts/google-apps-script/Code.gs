@@ -166,12 +166,15 @@ function fillCodes_(report) {
 function fixOrderSheetHeaders() {
   const sh = orderSheet_().getSheetByName(ORDER_TAB);
   if (!sh) return '找不到訂單分頁';
+  return ensureCarColumn_(sh);
+}
+
+/** 內部：標題列缺「車號」就插在「最後更新」左邊（不需要人工插欄） */
+function ensureCarColumn_(sh) {
+  if (!sh) return 'no-sheet';
   const lastCol = Math.max(sh.getLastColumn(), ORDER_HEADERS.length);
   const hdr = sh.getRange(1, 1, 1, lastCol).getValues()[0].map((v) => String(v || '').trim());
-  if (hdr.indexOf('車號') >= 0) {
-    Logger.log('✅ 標題列已有「車號」，不需修改');
-    return 'ok: 已有車號欄';
-  }
+  if (hdr.indexOf('車號') >= 0) return 'ok: 已有車號欄';
   const upd = hdr.indexOf('最後更新');
   const at = upd >= 0 ? upd + 1 : 15;          // 插在「最後更新」左邊
   sh.insertColumnBefore(at);
@@ -369,7 +372,7 @@ function doPost(e) {
     // 先設文字格式：電話保住前導 0、取餐時間不被轉成日期
     sh.getRange(rowIndex, 5).setNumberFormat('@');
     sh.getRange(rowIndex, 6).setNumberFormat('@');
-    sh.getRange(rowIndex, 1, 1, ORDER_HEADERS.length).setValues([values]);
+    writeRowByHeader_(sh, rowIndex, values);
     const tidyUpd = tidyOrderSheet_();     // 取消 → 搬到「已取消」分頁＋重新排序
     return jsonOut({ ok: true, orderId: orderId, mode: 'updated', row: rowIndex, status: status,
                      archived: tidyUpd.moved, active: tidyUpd.kept });
@@ -378,7 +381,7 @@ function doPost(e) {
   const newRow = sh.getLastRow() + 1;
   sh.getRange(newRow, 5).setNumberFormat('@');          // 電話欄先設文字
   sh.getRange(newRow, 6).setNumberFormat('@');          // 取餐時間也保持文字
-  sh.getRange(newRow, 1, 1, ORDER_HEADERS.length).setValues([values]);
+  writeRowByHeader_(sh, newRow, values);
 
   const tidyInfo = tidyOrderSheet_();
   return jsonOut({ ok: true, orderId: orderId, mode: 'created', row: newRow, status: status,
@@ -494,6 +497,7 @@ function orderSheet_() {
  * 只回傳「最近的狀態」（同一訂單編號在表上只有一列）
  */
 function staffOrders_(p) {
+  try { ensureCarColumn_(orderSheet_().getSheetByName(ORDER_TAB)); } catch (e) {}
   const cache = CacheService.getScriptCache();
   if (cache.get('staffLock')) return jsonOut({ ok: false, error: 'locked' });
   if (String(p.pw || '') !== STAFF_PASSWORD) {
@@ -555,6 +559,29 @@ function staffOrders_(p) {
   return jsonOut({ ok: true, count: orders.length, orders: orders, updatedAt: new Date().toISOString() });
 }
 
+/** 寫入一列：標題列與 ORDER_HEADERS 一致就直接寫；不一致（例如少了車號欄）
+ *  就先自動補欄、再依標題名稱逐格寫入，避免任何欄位錯位。 */
+function writeRowByHeader_(sh, rowIndex, values) {
+  const width = Math.max(sh.getLastColumn(), ORDER_HEADERS.length);
+  let hdr = sh.getRange(1, 1, 1, width).getValues()[0].map((v) => String(v || '').trim());
+  if (!ORDER_HEADERS.every((h, i) => hdr[i] === h)) {
+    try { ensureCarColumn_(sh); } catch (e) {}
+    hdr = sh.getRange(1, 1, 1, Math.max(sh.getLastColumn(), ORDER_HEADERS.length)).getValues()[0]
+      .map((v) => String(v || '').trim());
+    if (ORDER_HEADERS.every((h, i) => hdr[i] === h)) {
+      sh.getRange(rowIndex, 1, 1, ORDER_HEADERS.length).setValues([values]);
+      return;
+    }
+    // 逐格依標題寫入（標題沒有的欄位就略過）
+    ORDER_HEADERS.forEach((h, i) => {
+      const at = hdr.indexOf(h);
+      if (at >= 0 && values[i] !== undefined && values[i] !== null) sh.getRange(rowIndex, at + 1).setValue(values[i]);
+    });
+    return;
+  }
+  sh.getRange(rowIndex, 1, 1, ORDER_HEADERS.length).setValues([values]);
+}
+
 /** 員工：刪除某張訂單（讓客人可以重新點餐） */
 function staffDeleteOrder_(p) {
   if (String(p.pw || '') !== STAFF_PASSWORD) return jsonOut({ ok: false, error: 'bad_password' });
@@ -606,6 +633,7 @@ function staffSetEdit_(p) {
 
 /** 客人查自己的訂單（只回傳這支電話的，需驗證碼） */
 function myOrders_(p) {
+  try { ensureCarColumn_(orderSheet_().getSheetByName(ORDER_TAB)); } catch (e) {}
   const phone = normPhone(p.phone);
   const code = String(p.code || '').trim();
   if (!/^09\d{8}$/.test(phone)) return jsonOut({ ok: false, error: 'bad_phone' });

@@ -225,7 +225,11 @@ function openSetConfig(setId, editLine = null) {
     </div>
     <div class="space-y-4 px-4 py-4">
       <div class="rounded-2xl border border-brand-deep bg-brand/15 p-3 text-[12px] leading-relaxed text-ink-soft">
-        <b class="text-ink">套餐特選（隨餐附贈）</b><br>${def.fixed.map((f) => esc(f) + spicyHTML(f)).join('、')}
+        <b class="text-ink">套餐特選（隨餐附贈）</b><br>${def.fixed.map((f) => esc(f) + ((S.draft.mild || {})[f] ? '<span class="text-[9.5px] tracking-[.1em] text-gold">（不辣）</span>' : '') + spicyHTML(f)).join('、')}
+      ${(def.fixed || []).filter(canNoSpicy).length ? `<p class="mt-1.5 text-[11px] text-ink-mute">特選辣度（可選不辣）：</p>
+      <div class="mt-1 flex flex-wrap gap-1.5">
+        ${def.fixed.filter(canNoSpicy).map((f) => `<button class="chip ${(S.draft.mild || {})[f] ? 'on' : ''}" data-fixedmild="${esc(f)}">${esc(f)} 不辣</button>`).join('')}
+      </div>` : ''}
       </div>
       ${def.groups.map((g) => `
         <div class="group-box" data-group="${g.key}">
@@ -539,7 +543,7 @@ function setLineHTML(line) {
         </div>
         <p class="mt-0.5 text-[11px] text-ink-mute">${esc(def.dishLine)}・${esc(def.rice)}</p>
         <ul class="mt-1.5 space-y-0.5 text-[11px] leading-relaxed text-ink-soft">${groups}
-          <li><b>特選：</b>${def.fixed.map((f) => esc(f) + spicyHTML(f)).join('、')}</li>
+          <li><b>特選：</b>${def.fixed.map((f) => ((line.mild || {})[f] ? esc(f) + '<span class="text-[9.5px] tracking-[.1em] text-gold">（不辣）</span>' : esc(f) + spicyHTML(f))).join('、')}</li>
           <li><b>飲料：</b>${drinks}</li>${ups}
         </ul>
         <div class="mt-2 flex items-center justify-between">
@@ -1187,7 +1191,7 @@ function buildSummary() {
     const drinks = (line.drinks || []).filter((d) => d.name)
       .map((d) => `${d.name}${d.temp ? `（${d.temp}）` : ''}`);
     rows.push(`　飲料：${drinks.length ? drinks.join('、') : '—'}`);
-    rows.push(`　內含：${def.fixed.join('、')}`);
+    rows.push(`　內含：${def.fixed.map((f) => ((line.mild || {})[f] ? f + '（不辣）' : f)).join('、')}`);
     if ((line.upgrades || []).length) rows.push(`　升級：${line.upgrades.join('、')}`);
     return rows.join('\n');
   });
@@ -1388,7 +1392,7 @@ async function cancelOrder(orderId) {
 /* ================================================================ 事件綁定 */
 function bindEvents() {
   document.addEventListener('click', (e) => {
-    const t = e.target.closest('[data-config-set],[data-pick],[data-mildpick],[data-upgrade],[data-add-set],[data-close-modal],[data-close-cart],[data-add-alc],[data-qty-alc],[data-del-alc],[data-qty-set],[data-del-set],[data-cat],[data-edit-order],[data-cancel-order],[data-menu-action],[data-drawer-close]');
+    const t = e.target.closest('[data-config-set],[data-pick],[data-mildpick],[data-fixedmild],[data-upgrade],[data-add-set],[data-close-modal],[data-close-cart],[data-add-alc],[data-qty-alc],[data-del-alc],[data-qty-set],[data-del-set],[data-cat],[data-edit-order],[data-cancel-order],[data-menu-action],[data-drawer-close]');
     if (!t) return;
     const d = t.dataset;
 
@@ -1436,6 +1440,10 @@ function bindEvents() {
         askMild(d.value, document.querySelector(`[data-pick="${d.pick}"][data-value="${d.value}"]`));
       }
       return;
+    }
+    if (d.fixedmild !== undefined) {
+      S.draft.mild[d.fixedmild] = !S.draft.mild[d.fixedmild];
+      return syncDraftUI();
     }
     if (d.mildpick !== undefined) {
       S.draft.mild[d.mildpick] = !S.draft.mild[d.mildpick];
