@@ -1,3 +1,11 @@
+function setStaffPassword(pw) {
+  // 獨立腳本無法彈輸入框 → 請改用網址：?setupstaff=1&pw=你的新密碼
+  var v = String(pw || '').trim();
+  if (v.length < 8) return '請用網址設定：?setupstaff=1&pw=至少8碼的密碼';
+  PropertiesService.getScriptProperties().setProperty(STAFF_PW_PROP, v);
+  return 'ok：員工密碼已設定';
+}
+
 /**
  * 饗泰多｜除夕線上預點餐 — Google 端主程式（在「訂位表」的 Apps Script 裡執行）
  *
@@ -32,6 +40,15 @@ const ORDER_SHEET_ID_FIXED = '1qaJy5BOywcLwlE4tPdWtdNnaVA1gV6G1a8qe4yrOtIk';
 
 /** 員工看板密碼：改這一行後「重新部署」即生效（請換成自己的密碼） */
 const STAFF_PW_PROP = 'STAFF_PW';   // 員工密碼存於「指令碼屬性」，公開程式碼裡不留明文
+
+/** 【一次性】用網址設定員工密碼：?setupstaff=1&pw=新密碼（設定後即失效） */
+function staffSetup_(p) {
+  if (staffPw_()) return jsonOut({ ok: false, error: 'already_set', hint: '已設定過，如需更換請在編輯器改指令碼屬性' });
+  const v = String(p.pw || '').trim();
+  if (v.length < 8) return jsonOut({ ok: false, error: 'too_short', min: 8 });
+  PropertiesService.getScriptProperties().setProperty(STAFF_PW_PROP, v);
+  return jsonOut({ ok: true, msg: '員工密碼已設定，請用新密碼登入員工頁' });
+}
 
 /** 讀取員工密碼（未設定 → 空字串 → 一律拒絕） */
 function staffPw_() {
@@ -273,6 +290,7 @@ function doGet(e) {
   // 員工看板：?staff=1&pw=密碼 → 回傳訂單清單（需密碼，因為含客人姓名電話）
   if (p.staff) {
     // ?staff=1&pw=&setedit=<訂單編號>&open=1|0 → 開放／收回修改權限（用 GET 避免 POST 轉址問題）
+    if (p.setupstaff) return staffSetup_(p);
     if (p.peek) return staffPeek_(p);
     if (p.fix) return staffFixSheets_(p);
     if (p.setedit) return staffSetEdit_(p);
