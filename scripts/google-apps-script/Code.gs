@@ -50,11 +50,17 @@ var ci = { flag: COL_FLAG, cart: COL_CART, car: COL_CAR, updated: COL_UPDATED };
 function colIdx_(sh) {
   const width = Math.max(sh.getLastColumn(), ORDER_HEADERS.length);
   const hdr = sh.getRange(1, 1, 1, width).getValues()[0].map((v) => String(v || '').trim());
-  const at = (name, fb) => { const i = hdr.indexOf(name); return i >= 0 ? i : fb; };
+  // 精確比對優先；找不到就用「包含關鍵字」的方式容忍「車牌」「車號 」這類寫法
+  const at = (name, fb, fuzzy) => {
+    let i = hdr.indexOf(name);
+    if (i >= 0) return i;
+    if (fuzzy) { i = hdr.findIndex((h) => fuzzy.some((k) => h.indexOf(k) >= 0)); if (i >= 0) return i; }
+    return fb;
+  };
   return {
     flag: at('修改權限', COL_FLAG),
     cart: at('原始資料', COL_CART),
-    car: at('車號', COL_CAR),
+    car: at('車號', COL_CAR, ['車牌', '車號', '車']),
     updated: at('最後更新', COL_UPDATED),
   };
 }
