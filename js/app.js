@@ -1038,7 +1038,9 @@ async function loadMyOrders() {
   } catch (err) { /* 連線異常就用本機資料 */ }
   const offline = !list;
   if (offline) list = localAsMine();
-  renderMyOrders(list, offline);
+  // 客人端不顯示已取消的訂單
+  const visible = (list || []).filter((o) => o.status !== '已取消');
+  renderMyOrders(visible, offline);
 }
 
 function renderMyOrders(list, offline) {
