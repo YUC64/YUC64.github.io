@@ -44,6 +44,21 @@ const COL_CART = ORDER_HEADERS.indexOf('原始資料');
 const COL_CAR = ORDER_HEADERS.indexOf('車號');
 const COL_UPDATED = ORDER_HEADERS.indexOf('最後更新');
 
+var ci = { flag: COL_FLAG, cart: COL_CART, car: COL_CAR, updated: COL_UPDATED };   // 目前使用的欄位索引
+
+/** 依試算表「實際標題列」取得各欄索引（車號放哪一欄都能正確讀寫） */
+function colIdx_(sh) {
+  const width = Math.max(sh.getLastColumn(), ORDER_HEADERS.length);
+  const hdr = sh.getRange(1, 1, 1, width).getValues()[0].map((v) => String(v || '').trim());
+  const at = (name, fb) => { const i = hdr.indexOf(name); return i >= 0 ? i : fb; };
+  return {
+    flag: at('修改權限', COL_FLAG),
+    cart: at('原始資料', COL_CART),
+    car: at('車號', COL_CAR),
+    updated: at('最後更新', COL_UPDATED),
+  };
+}
+
 const RESERVATION_HEADERS = ['姓名', '電話', '驗證碼'];
 
 const CODE_LENGTH = 4;          // 驗證碼長度（要更安全可改 6）
@@ -289,7 +304,7 @@ function doPost(e) {
     const rowsS = shS.getRange(2, 1, lastS - 1, ORDER_HEADERS.length).getValues();
     for (let i = rowsS.length - 1; i >= 0; i--) {
       if (String(rowsS[i][0] || '').trim() === oid) {
-        shS.getRange(i + 2, COL_FLAG + 1).setValues([[staffAct === '開放修改' ? 'open' : '']]);
+        shS.getRange(i + 2, colIdx_(shS).flag + 1).setValues([[staffAct === '開放修改' ? 'open' : '']]);
         return jsonOut({ ok: true, orderId: oid, editable: staffAct === '開放修改' });
       }
     }
@@ -314,6 +329,7 @@ function doPost(e) {
   const sh = ss.getSheetByName(ORDER_TAB);
   const last = sh.getLastRow();
   const rows = last > 1 ? sh.getRange(2, 1, last - 1, ORDER_HEADERS.length).getValues() : [];
+  ci = colIdx_(sh);          // 依實際標題列取得各欄索引（車號放哪一欄都正確）
 
   // 找同一訂單編號（只認同一支電話的單，避免猜別人的編號）
   let rowIndex = -1;
@@ -334,7 +350,7 @@ function doPost(e) {
     if (dup) return jsonOut({ ok: false, error: 'already_ordered' });
   } else {
     // 修改／取消需要門市開放權限
-    const flag = String((rows[rowIndex - 2] || [])[COL_FLAG] || '').trim();
+    const flag = String((rows[rowIndex - 2] || [])[ci.flag] || '').trim();
     if (flag !== 'open') return jsonOut({ ok: false, error: 'edit_locked' });
   }
 
@@ -364,8 +380,8 @@ function doPost(e) {
     keep(body.note ? safe_(body.note) : '', 13),
     keep(body.car ? safe_(body.car) : '', 14),
     now,
-    (action === '修改' || action === '取消') ? '' : String((base || [])[COL_FLAG] || ''),   // 改完／取消就收回權限
-    keep(body.cart ? safe_(body.cart) : '', COL_CART),
+    (action === '修改' || action === '取消') ? '' : String((base || [])[ci.flag] || ''),   // 改完／取消就收回權限
+    keep(body.cart ? safe_(body.cart) : '', ci.cart),
   ];
 
   if (rowIndex > 0) {
@@ -545,9 +561,9 @@ function staffOrders_(p) {
       service: num_(r[11]),
       total: num_(r[12]),
       note: String(r[13] || '').trim(),
-      updated: tsStr_(r[COL_UPDATED]),
-      car: String(r[COL_CAR] || '').trim(),
-      editable: String(r[COL_FLAG] || '').trim() === 'open',
+      updated: tsStr_(r[ci.updated]),
+      car: String(r[ci.car] || '').trim(),
+      editable: String(r[ci.flag] || '').trim() === 'open',
       src: src.tab,
     });
   }
@@ -595,6 +611,7 @@ function staffDeleteOrder_(p) {
     const last = sh.getLastRow();
     if (last < 2) continue;
     const rows = sh.getRange(2, 1, last - 1, ORDER_HEADERS.length).getValues();
+    ci = colIdx_(sh);
     for (let i = rows.length - 1; i >= 0; i--) {
       if (String(rows[i][0] || '').trim() === oid) {
         sh.deleteRow(i + 2);
@@ -621,9 +638,10 @@ function staffSetEdit_(p) {
     const last = sh.getLastRow();
     if (last < 2) continue;
     const rows = sh.getRange(2, 1, last - 1, ORDER_HEADERS.length).getValues();
+    ci = colIdx_(sh);
     for (let i = rows.length - 1; i >= 0; i--) {
       if (String(rows[i][0] || '').trim() === oid) {
-        sh.getRange(i + 2, COL_FLAG + 1).setValues([[open ? 'open' : '']]);
+        sh.getRange(i + 2, colIdx_(sh).flag + 1).setValues([[open ? 'open' : '']]);
         return jsonOut({ ok: true, orderId: oid, editable: open, row: i + 2, tab: tabs[t] });
       }
     }
@@ -649,6 +667,7 @@ function myOrders_(p) {
     const last = sh.getLastRow();
     if (last < 2) return;
     const rows = sh.getRange(2, 1, last - 1, ORDER_HEADERS.length).getValues();
+    ci = colIdx_(sh);
     rows.forEach(function (r) {
       if (normPhone(r[4]) !== phone) return;
       const id = String(r[0] || '').trim();
@@ -665,10 +684,10 @@ function myOrders_(p) {
         service: num_(r[11]),
         total: num_(r[12]),
         note: String(r[13] || '').trim(),
-        updated: tsStr_(r[COL_UPDATED]),
-        car: String(r[COL_CAR] || '').trim(),
-        editable: String(r[COL_FLAG] || '').trim() === 'open',
-        cart: parseCart_(r[COL_CART]),
+        updated: tsStr_(r[ci.updated]),
+        car: String(r[ci.car] || '').trim(),
+        editable: String(r[ci.flag] || '').trim() === 'open',
+        cart: parseCart_(r[ci.cart]),
       });
     });
   });
