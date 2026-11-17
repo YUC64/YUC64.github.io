@@ -252,6 +252,7 @@ function doGet(e) {
   // 員工看板：?staff=1&pw=密碼 → 回傳訂單清單（需密碼，因為含客人姓名電話）
   if (p.staff) {
     // ?staff=1&pw=&setedit=<訂單編號>&open=1|0 → 開放／收回修改權限（用 GET 避免 POST 轉址問題）
+    if (p.peek) return staffPeek_(p);
     if (p.setedit) return staffSetEdit_(p);
     if (p.delorder) return staffDeleteOrder_(p);
     return staffOrders_(p);
@@ -632,6 +633,22 @@ function staffDeleteOrder_(p) {
   return jsonOut({ ok: false, error: 'order_not_found' });
 }
 
+/** 診斷用：回傳兩個分頁的標題列與第一筆資料（方便確認欄位對應） */
+function staffPeek_(p) {
+  if (String(p.pw || '') !== STAFF_PASSWORD) return jsonOut({ ok: false, error: 'bad_password' });
+  const ss = orderSheet_();
+  const out = {};
+  [ORDER_TAB, ARCHIVE_TAB].forEach(function (name) {
+    const sh = ss.getSheetByName(name);
+    if (!sh) { out[name] = 'no-sheet'; return; }
+    const lastCol = Math.max(sh.getLastColumn(), 1);
+    const hdr = sh.getRange(1, 1, 1, lastCol).getValues()[0].map(function (v) { return String(v || '').trim(); });
+    const first = sh.getLastRow() > 1 ? sh.getRange(2, 1, 1, lastCol).getValues()[0].map(function (v) { return String(v || '').slice(0, 30); }) : [];
+    out[name] = { cols: hdr.length, header: hdr, firstRow: first, idx: colIdx_(sh) };
+  });
+  return jsonOut({ ok: true, tabs: out });
+}
+
 /** 員工：開放／收回某張訂單的修改權限（GET，回 {ok, editable}） */
 function staffSetEdit_(p) {
   const cache = CacheService.getScriptCache();
@@ -682,6 +699,7 @@ function myOrders_(p) {
     const rows = sh.getRange(2, 1, last - 1, ORDER_HEADERS.length).getValues();
     ci = colIdx_(sh);
     rows.forEach(function (r) {
+      const ci = colIdx_(sh);   // 每個分頁各自解析，避免互相覆蓋
       if (normPhone(r[4]) !== phone) return;
       const id = String(r[0] || '').trim();
       if (!id) return;
