@@ -169,11 +169,12 @@
       @page{margin:14mm}
       html,body{background:#fff !important;height:auto !important;overflow:visible !important}
       #staffLock, #staffApp, #staffLock *, body > *:not(#kitchenPanel){display:none !important}
-      #kitchenPanel{position:static !important;inset:auto !important;display:block !important;
+      html,body{overflow-x:hidden !important;width:auto !important;max-width:100% !important}
+      #kitchenPanel{width:auto !important;max-width:100% !important;margin:0 !important;position:static !important;inset:auto !important;display:block !important;
         background:#fff !important;padding:0 !important;height:auto !important}
       #kitchenPanel .kk-head{max-width:none;border:0;background:#fff;padding:0 0 10px;
         border-bottom:2px solid #17140F}
-      #kitchenPanel .kk-body{max-height:none !important;max-width:none;border:0;padding:6px 0 0;
+      #kitchenPanel .kk-body{max-height:none !important;max-width:100% !important;width:auto !important;border:0;padding:6px 0 0;
         overflow:visible !important}
       .kk-actions{display:none !important}
       .kk-row{font-size:14px;padding:7px 0;break-inside:avoid;page-break-inside:avoid}
