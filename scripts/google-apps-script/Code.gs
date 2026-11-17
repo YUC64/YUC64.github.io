@@ -597,7 +597,7 @@ function writeRowByHeader_(sh, rowIndex, values) {
   if (missing.length) {
     missing.forEach((h) => {
       const at = width + 1;
-      sh.getRange(1, at).setValue(h).setFontWeight('bold').setBackground('#FFD400');
+      sh.getRange(1, at).setValues([[h]]);
       hdr.push(h); width = at;
     });
   }
