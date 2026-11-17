@@ -589,24 +589,24 @@ function staffOrders_(p) {
 /** 寫入一列：標題列與 ORDER_HEADERS 一致就直接寫；不一致（例如少了車號欄）
  *  就先自動補欄、再依標題名稱逐格寫入，避免任何欄位錯位。 */
 function writeRowByHeader_(sh, rowIndex, values) {
-  const width = Math.max(sh.getLastColumn(), ORDER_HEADERS.length);
+  // 一律依「標題名稱」寫入：車號／最後更新／修改權限 放哪一欄都不會錯
+  let width = Math.max(sh.getLastColumn(), ORDER_HEADERS.length);
   let hdr = sh.getRange(1, 1, 1, width).getValues()[0].map((v) => String(v || '').trim());
-  if (!ORDER_HEADERS.every((h, i) => hdr[i] === h)) {
-    try { ensureCarColumn_(sh); } catch (e) {}
-    hdr = sh.getRange(1, 1, 1, Math.max(sh.getLastColumn(), ORDER_HEADERS.length)).getValues()[0]
-      .map((v) => String(v || '').trim());
-    if (ORDER_HEADERS.every((h, i) => hdr[i] === h)) {
-      sh.getRange(rowIndex, 1, 1, ORDER_HEADERS.length).setValues([values]);
-      return;
-    }
-    // 逐格依標題寫入（標題沒有的欄位就略過）
-    ORDER_HEADERS.forEach((h, i) => {
-      const at = hdr.indexOf(h);
-      if (at >= 0 && values[i] !== undefined && values[i] !== null) sh.getRange(rowIndex, at + 1).setValue(values[i]);
+  // 缺哪個標題就補在該分頁最後一欄（確保資料不會寫到沒標題的欄位）
+  const missing = ORDER_HEADERS.filter((h) => hdr.indexOf(h) < 0);
+  if (missing.length) {
+    missing.forEach((h) => {
+      const at = width + 1;
+      sh.getRange(1, at).setValue(h).setFontWeight('bold').setBackground('#FFD400');
+      hdr.push(h); width = at;
     });
-    return;
   }
-  sh.getRange(rowIndex, 1, 1, ORDER_HEADERS.length).setValues([values]);
+  ORDER_HEADERS.forEach((h, i) => {
+    const at = hdr.indexOf(h);
+    if (at >= 0 && values[i] !== undefined && values[i] !== null) {
+      sh.getRange(rowIndex, at + 1).setValue(values[i]);
+    }
+  });
 }
 
 /** 員工：刪除某張訂單（讓客人可以重新點餐） */
