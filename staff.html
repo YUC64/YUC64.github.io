@@ -24,7 +24,7 @@
     } },
   };
 </script>
-<link rel="stylesheet" href="assets/css/style.css?v=20261121b">
+<link rel="stylesheet" href="assets/css/style.css?v=20261121c">
 <style>
   /* 只有看板用得到的樣式 */
   .kpi { border: 1px solid var(--line); background: #fff; padding: 1.1rem 1.25rem; }
@@ -50,10 +50,16 @@
   @media (min-width: 900px) { .list-head { display: block; } }
   .list-head.is-empty { display: none !important; }
   @media print {
-    header, .no-print, footer { display: none !important; }
-    body { background: #fff !important; }
-    .row { break-inside: avoid; border-color: #ccc; }
-    .detail { display: block !important; }
+    @page { margin: 12mm; size: A4; }
+    header, .no-print, footer, #staffLock, #btnPrint, #btnExport, #btnKitchen,
+    #btnRefresh, #search, #sortBy, #tabs, #autoRefresh { display: none !important; }
+    html, body { background: #fff !important; height: auto !important; overflow: visible !important; }
+    .kpi { border: 1px solid #ccc !important; }
+    .row { break-inside: avoid; page-break-inside: avoid; border: 1px solid #ddd !important;
+           margin-bottom: 6px; padding: 8px 10px !important; box-shadow: none !important; }
+    .detail { display: block !important; overflow: visible !important; max-height: none !important; }
+    .row, .row * { white-space: normal !important; overflow: visible !important; }
+    a { text-decoration: none !important; color: #17140F !important; }
   }
 </style>
 </head>
@@ -157,8 +163,8 @@
   </footer>
 </div>
 
-<script src="js/config.js?v=20261121b"></script>
-<script src="js/staff.js?v=20261121b"></script>
-  <script src="js/staff-kitchen.js?v=20261121b"></script>
+<script src="js/config.js?v=20261121c"></script>
+<script src="js/staff.js?v=20261121c"></script>
+  <script src="js/staff-kitchen.js?v=20261121c"></script>
 </body>
 </html>
