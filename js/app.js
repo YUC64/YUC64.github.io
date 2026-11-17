@@ -98,7 +98,7 @@ async function refreshMyOrderState(autoOpen) {
   } catch (e) { /* 連線異常就沿用本機判斷 */ }
   // 右上按鈕文字：已送出 → 我的訂單
   const lbl = document.querySelector('#btnCartTop [data-top-label]');
-  if (lbl) lbl.textContent = S.hasOrder ? '我的點餐' : '訂單';
+  if (lbl) lbl.textContent = S.hasOrder ? '我的餐點' : '訂單';
   renderSets();                                  // 讓套餐卡按鈕同步（已送出 → 觀看菜色）
   if (S.hasOrder && autoOpen) openMyOrders();
 }
@@ -665,7 +665,7 @@ function renderCart() {
     topBtn.classList.toggle('hidden', !on);
     // 已送出訂單 → 這顆按鈕就是「我的訂單」
     const lbl = topBtn.querySelector('[data-top-label]');
-    if (lbl) lbl.textContent = hasOrder() ? '我的點餐' : '訂單';
+    if (lbl) lbl.textContent = hasOrder() ? '我的餐點' : '訂單';
   }
   const bar = $('#mobileBar');
   if (bar) bar.classList.toggle('hidden', !on || !c.count);   // 沒有餐點時不佔版面
@@ -940,7 +940,7 @@ function openGuide() {
       <li>套餐內每個品類都需依「<b>選 N</b>」規則選滿（含飲料）；飲料可依杯選擇<b>冰／去冰／熱</b>。</li>
       <li>辣度依門市菜單標示：${sp}${sp} 較辣・${sp} 微辣・未標示者為不辣。</li>
       <li>甜點與飲料可選<b>冰／去冰／冷／熱</b>（摩摩喳喳：冰／去冰；椰香黑糯米：冷／熱；泰式奶茶：冰／去冰／熱）。</li>
-      <li>完成訂購後畫面會顯示<b>訂單編號</b>；之後用同一支手機＋驗證碼登入，可在「我的點餐」<b>修改或取消</b>。</li>
+      <li>完成訂購後畫面會顯示<b>訂單編號</b>；之後用同一支手機＋驗證碼登入，可在「我的餐點」<b>修改或取消</b>。</li>
       <li>本頁為預先點餐登記，<b>不含線上結帳與金流</b>，款項請於現場結清。</li>
       <li>僅供參考，菜單內容以現場供應為主。</li>
     </ol>
@@ -952,7 +952,7 @@ function openGuide() {
 /** 三條線選單的內容：會員區塊＋導覽＋用餐須知 */
 function renderMember() {
   const cl = $('#coverLoginLabel');
-  if (cl) cl.textContent = S.user ? '我的點餐' : '登入 / 我的點餐';
+  if (cl) cl.textContent = S.user ? '我的餐點' : '登入 / 我的餐點';
   const dot = $('#drawerDot');
   if (dot) dot.classList.toggle('hidden', !S.user);
 
@@ -971,7 +971,7 @@ function renderMember() {
           </div>
         </div>
         <div class="mt-4 grid grid-cols-2 gap-2">
-          <button data-menu-action="orders" class="btn btn-solid px-3 py-2.5 text-[10.5px]">我的點餐</button>
+          <button data-menu-action="orders" class="btn btn-solid px-3 py-2.5 text-[10.5px]">我的餐點</button>
           <button data-menu-action="logout" class="btn btn-line px-3 py-2.5 text-[10.5px]">登出</button>
         </div>
       </div>`
@@ -1379,9 +1379,8 @@ function showSuccess(record, delivered) {
               ? '訂單已寫入門市試算表，門市將依此備餐。'
               : '訂單已送出到門市 Google 表單（修改會以新的一列記錄，門市取最新一筆）。'}
       </p>
-      <div class="mt-4 flex flex-col gap-2">
-        <button id="btnGoOrders" class="btn btn-solid w-full text-[11.5px]">查看我的訂單</button>
-        <button data-close-modal class="w-full rounded-full bg-ink/5 py-3 text-sm font-bold">繼續點餐</button>
+      <div class="mt-4">
+        <button id="btnGoOrders" class="btn btn-solid w-full text-[11.5px]">查看我的餐點</button>
       </div>
       <p class="mt-3 text-[10px] leading-relaxed tracking-[.06em] text-ink-mute">
         訂單已送出，內容如需更改請${tel('聯繫')}，由門市為您開啟修改。
