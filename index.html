@@ -32,7 +32,10 @@
     },
   };
 </script>
+<script>try{if(!sessionStorage.getItem('introShown'))document.documentElement.classList.add('intro-playing');}catch(e){}</script>
 <style>
+html.intro-playing .rise{animation-delay:calc(1.55s + var(--d, 0ms)) !important}
+html.intro-playing .rule-grow{animation-delay:calc(1.7s + var(--d, 0ms)) !important}
 #intro{position:fixed;inset:0;z-index:9999;display:grid;place-content:center;justify-items:center;gap:18px;
   background:radial-gradient(120% 90% at 50% 40%,#FBF7F0 0%,#F4EFE5 100%);
   transition:opacity .6s cubic-bezier(.16,1,.3,1),visibility .6s;will-change:opacity}
@@ -50,7 +53,7 @@
   #intro{display:none}
 }
 </style>
-<link rel="stylesheet" href="assets/css/style.css?v=20261125a">
+<link rel="stylesheet" href="assets/css/style.css?v=20261125b">
 </head>
 <body id="top" class="font-sans text-ink antialiased">
 
@@ -276,10 +279,10 @@
 
 <div id="toast" class="pointer-events-none fixed left-1/2 top-20 z-[70] hidden -translate-x-1/2 bg-ink px-6 py-3 text-[12px] tracking-[.14em] text-white/95"></div>
 
-<script src="js/config.js?v=20261125a"></script>
-<script src="js/data.js?v=20261125a"></script>
-<script src="js/app.js?v=20261125a"></script>
-<script src="js/lightbox.js?v=20261125a"></script>
+<script src="js/config.js?v=20261125b"></script>
+<script src="js/data.js?v=20261125b"></script>
+<script src="js/app.js?v=20261125b"></script>
+<script src="js/lightbox.js?v=20261125b"></script>
 <script src="js/auto-reload.js"></script>
 <script>
 (function(){
