@@ -168,7 +168,7 @@
     @media print{
       @page{margin:14mm}
       html,body{background:#fff !important;height:auto !important;overflow:visible !important}
-      body > *:not(#kitchenPanel){display:none !important}
+      #staffLock, #staffApp, #staffLock *, body > *:not(#kitchenPanel){display:none !important}
       #kitchenPanel{position:static !important;inset:auto !important;display:block !important;
         background:#fff !important;padding:0 !important;height:auto !important}
       #kitchenPanel .kk-head{max-width:none;border:0;background:#fff;padding:0 0 10px;
