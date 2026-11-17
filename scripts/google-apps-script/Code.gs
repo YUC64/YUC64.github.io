@@ -337,7 +337,8 @@ function doPost(e) {
   const ss = orderSheet_();
   const sh = ss.getSheetByName(ORDER_TAB);
   const last = sh.getLastRow();
-  const rows = last > 1 ? sh.getRange(2, 1, last - 1, ORDER_HEADERS.length).getValues() : [];
+  const W = Math.max(sh.getLastColumn(), ORDER_HEADERS.length);
+  const rows = last > 1 ? sh.getRange(2, 1, last - 1, W).getValues() : [];
   ci = colIdx_(sh);          // 依實際標題列取得各欄索引（車號放哪一欄都正確）
 
   // 找同一訂單編號（只認同一支電話的單，避免猜別人的編號）
@@ -424,7 +425,7 @@ function tidyOrderSheet_() {
   const last = sh.getLastRow();
   if (last < 2) return { moved: 0, kept: 0 };
 
-  const width = ORDER_HEADERS.length;
+  const width = Math.max(sh.getLastColumn(), ORDER_HEADERS.length);
   const range = sh.getRange(2, 1, last - 1, width);
   const rows = range.getValues();
 
@@ -622,7 +623,7 @@ function staffDeleteOrder_(p) {
     if (!sh) continue;
     const last = sh.getLastRow();
     if (last < 2) continue;
-    const rows = sh.getRange(2, 1, last - 1, ORDER_HEADERS.length).getValues();
+    const rows = sh.getRange(2, 1, last - 1, Math.max(sh.getLastColumn(), ORDER_HEADERS.length)).getValues();
     ci = colIdx_(sh);
     for (let i = rows.length - 1; i >= 0; i--) {
       if (String(rows[i][0] || '').trim() === oid) {
@@ -692,7 +693,7 @@ function staffSetEdit_(p) {
     if (!sh) continue;
     const last = sh.getLastRow();
     if (last < 2) continue;
-    const rows = sh.getRange(2, 1, last - 1, ORDER_HEADERS.length).getValues();
+    const rows = sh.getRange(2, 1, last - 1, Math.max(sh.getLastColumn(), ORDER_HEADERS.length)).getValues();
     ci = colIdx_(sh);
     for (let i = rows.length - 1; i >= 0; i--) {
       if (String(rows[i][0] || '').trim() === oid) {
@@ -724,7 +725,7 @@ function myOrders_(p) {
     if (!sh) return;
     const last = sh.getLastRow();
     if (last < 2) return;
-    const rows = sh.getRange(2, 1, last - 1, ORDER_HEADERS.length).getValues();
+    const rows = sh.getRange(2, 1, last - 1, Math.max(sh.getLastColumn(), ORDER_HEADERS.length)).getValues();
     ci = colIdx_(sh);
     rows.forEach(function (r) {
       const ci = colIdx_(sh);   // 每個分頁各自解析，避免互相覆蓋
