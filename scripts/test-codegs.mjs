@@ -112,6 +112,7 @@ class Spreadsheet {
 const DBS = new Map();
 const openById = (id) => { if (!DBS.has(id)) DBS.set(id, new Spreadsheet(id)); return DBS.get(id); };
 const props = new Map();
+props.set('STAFF_PW', '8888');   // 測試用員工密碼
 const cache = new Map();
 const stubs = {
   SpreadsheetApp: { openById, create: (name) => new Spreadsheet('NEW-' + name), flush() {} },

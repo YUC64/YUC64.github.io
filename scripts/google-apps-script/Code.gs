@@ -31,7 +31,28 @@ const ARCHIVE_TAB = '已取消';   // 取消的訂單搬到這裡，主表保持
 const ORDER_SHEET_ID_FIXED = '1qaJy5BOywcLwlE4tPdWtdNnaVA1gV6G1a8qe4yrOtIk';
 
 /** 員工看板密碼：改這一行後「重新部署」即生效（請換成自己的密碼） */
-const STAFF_PASSWORD = '8888';
+const STAFF_PW_PROP = 'STAFF_PW';   // 員工密碼存於「指令碼屬性」，公開程式碼裡不留明文
+
+/** 讀取員工密碼（未設定 → 空字串 → 一律拒絕） */
+function staffPw_() {
+  return String(PropertiesService.getScriptProperties().getProperty(STAFF_PW_PROP) || '');
+}
+/** 員工密碼比對 */
+function staffOk_(pw) {
+  const real = staffPw_();
+  return !!real && String(pw || '') === real;
+}
+/** 【一次性設定】在編輯器直接執行本函式，輸入新密碼（至少 8 碼） */
+function setStaffPassword(pw) {
+  var v = pw;
+  if (!v && typeof Browser !== 'undefined' && Browser.inputBox) {
+    v = Browser.inputBox('設定員工密碼（至少 8 碼，建議英文＋數字）');
+  }
+  v = String(v || '').trim();
+  if (v.length < 8) return 'too_short（至少 8 碼）';
+  PropertiesService.getScriptProperties().setProperty(STAFF_PW_PROP, v);
+  return 'ok：員工密碼已設定';
+}
 const STAFF_MAX_TRY = 20;        // 15 分鐘內錯超過這次數就暫時鎖住
 const ORDER_HEADERS = [
   '訂單編號', '狀態', '動作', '姓名', '電話', '預計取餐時間', '用餐人數',
@@ -302,7 +323,7 @@ function doPost(e) {
 
   // 員工操作：開放／收回某張訂單的修改權限（用 staffPw 驗證，不需要客人驗證碼）
   if (body.staffPw !== undefined) {
-    if (String(body.staffPw) !== STAFF_PASSWORD) return jsonOut({ ok: false, error: 'bad_password' });
+    if (!staffOk_(body.staffPw)) return jsonOut({ ok: false, error: 'bad_password' });
     const staffAct = String(body.action || '');
     if (['開放修改', '收回修改'].indexOf(staffAct) < 0) return jsonOut({ ok: false, error: 'bad_action' });
     const oid = String(body.orderId || '').trim();
@@ -529,7 +550,7 @@ function staffOrders_(p) {
   } catch (e) {}
   const cache = CacheService.getScriptCache();
   if (cache.get('staffLock')) return jsonOut({ ok: false, error: 'locked' });
-  if (String(p.pw || '') !== STAFF_PASSWORD) {
+  if (!staffOk_(p.pw)) {
     const n = Number(cache.get('staffTry') || 0) + 1;
     cache.put('staffTry', String(n), 900);
     if (n >= STAFF_MAX_TRY) cache.put('staffLock', '1', 900);
@@ -613,7 +634,7 @@ function writeRowByHeader_(sh, rowIndex, values) {
 
 /** 員工：刪除某張訂單（讓客人可以重新點餐） */
 function staffDeleteOrder_(p) {
-  if (String(p.pw || '') !== STAFF_PASSWORD) return jsonOut({ ok: false, error: 'bad_password' });
+  if (!staffOk_(p.pw)) return jsonOut({ ok: false, error: 'bad_password' });
   const oid = String(p.delorder || '').trim();
   if (!oid) return jsonOut({ ok: false, error: 'no_order_id' });
   const ss = orderSheet_();
@@ -637,7 +658,7 @@ function staffDeleteOrder_(p) {
 
 /** 一鍵把兩個分頁的欄位「實體重排」成標準順序（依標題名稱搬移，不會掉資料） */
 function staffFixSheets_(p) {
-  if (String(p.pw || '') !== STAFF_PASSWORD) return jsonOut({ ok: false, error: 'bad_password' });
+  if (!staffOk_(p.pw)) return jsonOut({ ok: false, error: 'bad_password' });
   const ss = orderSheet_();
   const done = {};
   [ORDER_TAB, ARCHIVE_TAB].forEach(function (name) {
@@ -664,7 +685,7 @@ function staffFixSheets_(p) {
 
 /** 診斷用：回傳兩個分頁的標題列與第一筆資料（方便確認欄位對應） */
 function staffPeek_(p) {
-  if (String(p.pw || '') !== STAFF_PASSWORD) return jsonOut({ ok: false, error: 'bad_password' });
+  if (!staffOk_(p.pw)) return jsonOut({ ok: false, error: 'bad_password' });
   const ss = orderSheet_();
   const out = {};
   [ORDER_TAB, ARCHIVE_TAB].forEach(function (name) {
@@ -681,7 +702,7 @@ function staffPeek_(p) {
 /** 員工：開放／收回某張訂單的修改權限（GET，回 {ok, editable}） */
 function staffSetEdit_(p) {
   const cache = CacheService.getScriptCache();
-  if (String(p.pw || '') !== STAFF_PASSWORD) return jsonOut({ ok: false, error: 'bad_password' });
+  if (!staffOk_(p.pw)) return jsonOut({ ok: false, error: 'bad_password' });
   const oid = String(p.setedit || '').trim();
   const open = String(p.open || '') === '1';
   if (!oid) return jsonOut({ ok: false, error: 'no_order_id' });
