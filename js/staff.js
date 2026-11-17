@@ -232,6 +232,40 @@
     $('#statPeople').textContent = live.reduce((s, o) => s + num(o.headcount), 0);
     $('#statCancelled').textContent = cancelled.length;
 
+    // 飲料合計：泰式奶茶（冰） 3、泰式奶茶（去冰） 2 …
+    (function renderDrinks() {
+      const box = document.getElementById('drinkStats');
+      const body = document.getElementById('drinkStatsBody');
+      if (!box || !body) return;
+      const count = {};
+      const bump = (k, n) => { const key = String(k || '').trim(); if (!key) return; count[key] = (count[key] || 0) + n; };
+      live.forEach((o) => {
+        // 套餐內容裡的「飲料：A（冰）、A（去冰）」
+        String(o.sets || '').split('
+').forEach((line) => {
+          const t = line.replace(/^　+/, '');
+          if (t.indexOf('飲料：') !== 0) return;
+          t.slice(3).split('、').map((x) => x.trim()).filter(Boolean).forEach((d) => {
+            const m = d.match(/^(.*?)[（(]([^）)]*)[）)]\s*$/);
+            bump(m ? `${m[1]}（${m[2]}）` : d, 1);
+          });
+        });
+        // 單點內容裡的「泰式奶茶（熱）x2」
+        String(o.alacarte || '').split('、').map((x) => x.trim()).filter(Boolean).forEach((raw) => {
+          const m = raw.match(/^(.*?)[（(]([^）)]*)[）)]\s*[×x]\s*(\d+)$/);
+          if (!m) return;
+          if (!/茶|奶茶|啤酒|可樂|冰茶/.test(m[1])) return;      // 只統計飲料類
+          bump(`${m[1]}（${m[2]}）`, Number(m[3]) || 1);
+        });
+      });
+      const rows = Object.entries(count).sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1));
+      if (!rows.length) { box.classList.add('hidden'); return; }
+      box.classList.remove('hidden');
+      body.innerHTML = rows.map(([name, qty]) =>
+        `<span class="whitespace-nowrap"><span class="text-ink">${name.replace(/[&<>]/g, '')}</span>
+         <b class="ml-1 text-[15px] font-black">${qty}</b></span>`).join('');
+    })();
+
     $('#list').innerHTML = list.map((o) => rowHTML(o, fresh.includes(o.orderId))).join('');
     $('#empty').classList.toggle('hidden', list.length > 0);
     $('#listHead').classList.toggle('is-empty', list.length === 0);
