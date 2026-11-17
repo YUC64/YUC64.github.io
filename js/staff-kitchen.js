@@ -115,12 +115,16 @@
       p.id = 'kitchenPanel';
       document.body.appendChild(p);
       p.addEventListener('click', (e) => {
-        if (e.target.closest('[data-kk-close]')) p.classList.remove('open');
+        if (e.target.closest('[data-kk-close]')) {
+          p.classList.remove('open');
+          document.body.classList.remove('kk-printing');
+        }
         if (e.target.closest('[data-kk-print]')) window.print();
       });
     }
     p.innerHTML = html();
     p.classList.add('open');
+    document.body.classList.add('kk-printing');   // 讓列印只輸出出單表
   }
 
   function mountBtn() {
@@ -168,19 +172,25 @@
     @media print{
       @page{margin:14mm}
       html,body{background:#fff !important;height:auto !important;overflow:visible !important}
-      #staffLock, #staffApp, #staffLock *, body > *:not(#kitchenPanel){display:none !important}
-      html,body{overflow-x:hidden !important;width:auto !important;max-width:100% !important}
-      #kitchenPanel{width:auto !important;max-width:100% !important;margin:0 !important;padding:0 6mm !important;box-sizing:border-box !important;position:static !important;inset:auto !important;display:block !important;
-        background:#fff !important;padding:0 6mm !important;height:auto !important}
-      #kitchenPanel .kk-head{max-width:none;border:0;background:#fff;padding:0 0 10px;
+    }
+    /* 只有在「內場出單」開啟時，列印才只輸出出單表（不影響訂單看板的列印） */
+    @media print{
+      body.kk-printing #staffLock, body.kk-printing #staffApp,
+      body.kk-printing > *:not(#kitchenPanel){display:none !important}
+      body.kk-printing{overflow-x:hidden !important}
+      body.kk-printing #kitchenPanel{width:auto !important;max-width:100% !important;margin:0 !important;
+        padding:0 6mm !important;box-sizing:border-box !important;position:static !important;inset:auto !important;
+        display:block !important;background:#fff !important;height:auto !important}
+      body.kk-printing #kitchenPanel .kk-head{max-width:none;border:0;background:#fff;padding:0 0 10px;
         border-bottom:2px solid #17140F}
-      #kitchenPanel .kk-body{max-height:none !important;max-width:100% !important;width:auto !important;border:0;padding:6px 0 0;
-        overflow:visible !important}
-      .kk-actions{display:none !important}
-      .kk-row{font-size:14px;padding:7px 0;break-inside:avoid;page-break-inside:avoid}
-      .kk-qty{font-size:16px}
-      .kk-tag{border-color:#A67C52;color:#A67C52}
-    }`;
+      body.kk-printing #kitchenPanel .kk-body{max-height:none !important;max-width:100% !important;width:auto !important;
+        border:0;padding:6px 0 0;overflow:visible !important}
+      body.kk-printing .kk-actions{display:none !important}
+      body.kk-printing .kk-row{font-size:14px;padding:7px 0;break-inside:avoid;page-break-inside:avoid}
+      body.kk-printing .kk-qty{font-size:16px}
+      body.kk-printing .kk-tag{border-color:#A67C52;color:#A67C52}
+    }
+  }`;
     document.head.appendChild(st);
   }
 
