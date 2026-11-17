@@ -253,6 +253,7 @@ function doGet(e) {
   if (p.staff) {
     // ?staff=1&pw=&setedit=<訂單編號>&open=1|0 → 開放／收回修改權限（用 GET 避免 POST 轉址問題）
     if (p.peek) return staffPeek_(p);
+    if (p.fix) return staffFixSheets_(p);
     if (p.setedit) return staffSetEdit_(p);
     if (p.delorder) return staffDeleteOrder_(p);
     return staffOrders_(p);
@@ -631,6 +632,33 @@ function staffDeleteOrder_(p) {
     }
   }
   return jsonOut({ ok: false, error: 'order_not_found' });
+}
+
+/** 一鍵把兩個分頁的欄位「實體重排」成標準順序（依標題名稱搬移，不會掉資料） */
+function staffFixSheets_(p) {
+  if (String(p.pw || '') !== STAFF_PASSWORD) return jsonOut({ ok: false, error: 'bad_password' });
+  const ss = orderSheet_();
+  const done = {};
+  [ORDER_TAB, ARCHIVE_TAB].forEach(function (name) {
+    const sh = ss.getSheetByName(name);
+    if (!sh) return;
+    const last = sh.getLastRow();
+    if (last < 1) return;
+    const lastCol = Math.max(sh.getLastColumn(), ORDER_HEADERS.length);
+    const all = sh.getRange(1, 1, last, lastCol).getValues();
+    const hdr = all[0].map(function (v) { return String(v || '').trim(); });
+    const out = [ORDER_HEADERS.slice()];
+    all.slice(1).forEach(function (r) {
+      if (!String(r[0] || '').trim()) return;                    // 空列略過
+      out.push(ORDER_HEADERS.map(function (h) { const i = hdr.indexOf(h); return i >= 0 ? r[i] : ''; }));
+    });
+    sh.clear();
+    sh.getRange(1, 1, out.length, ORDER_HEADERS.length).setValues(out);
+    sh.getRange(1, 1, 1, ORDER_HEADERS.length).setFontWeight('bold').setBackground('#FFD400');
+    sh.getRange(2, 5, Math.max(out.length - 1, 1), 1).setNumberFormat('@');
+    done[name] = out.length - 1;
+  });
+  return jsonOut({ ok: true, normalized: done, header: ORDER_HEADERS });
 }
 
 /** 診斷用：回傳兩個分頁的標題列與第一筆資料（方便確認欄位對應） */
