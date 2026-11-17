@@ -359,3 +359,113 @@ img { -webkit-user-drag: none; }
   font-size:11px;letter-spacing:.14em;color:var(--ink,#17140F);transition:.2s}
 .mild-pop button.on{background:var(--ink,#17140F);color:#fff;border-color:var(--ink,#17140F)}
 @keyframes mpIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+
+
+/* ══════════════════════════════════════════════════════════════════
+ *  尊爵版微調層（只做加法，不改結構）
+ * ══════════════════════════════════════════════════════════════════ */
+:root {
+  --ink: #12100C;
+  --ink-soft: #3A342B;
+  --ink-mute: #8A8175;
+  --paper: #F7F3EB;
+  --paper-2: #EFE8DB;
+  --gold: #8C6A43;
+  --gold-soft: #C2A87F;
+  --line: rgba(18, 16, 12, .14);
+  --line-soft: rgba(18, 16, 12, .07);
+}
+
+/* 紙面：極淡的暖色漸層，讓大面積不死白 */
+body {
+  background-image:
+    radial-gradient(120% 80% at 50% -10%, rgba(255,252,246,.9) 0%, rgba(247,243,235,0) 60%),
+    linear-gradient(180deg, #F9F5EE 0%, #F6F2E9 100%);
+  background-attachment: fixed;
+}
+
+/* 標題層級：襯線、字距拉開、行高收緊 */
+.serif, h1, h2, h3 { font-feature-settings: "palt" 1; }
+h1 { letter-spacing: .04em; line-height: 1.18; }
+h2 { letter-spacing: .06em; line-height: 1.22; }
+
+/* 章節小標（CAPS）：加一條極細金線在前，製版感 */
+.caps {
+  letter-spacing: .34em;
+  color: var(--gold);
+  display: inline-flex;
+  align-items: center;
+  gap: .7em;
+}
+.caps::before {
+  content: "";
+  width: 26px; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold-soft));
+}
+
+/* 按鈕：更瘦長、字距更大、無陰影、過渡更慢 */
+.btn {
+  letter-spacing: .22em;
+  padding-top: .95rem;
+  padding-bottom: .95rem;
+  transition: letter-spacing .5s cubic-bezier(.16,1,.3,1),
+              background-color .35s ease, color .35s ease, border-color .35s ease;
+}
+.btn-solid { box-shadow: 0 18px 40px -28px rgba(18,16,12,.9); }
+.btn-solid:hover { box-shadow: 0 22px 50px -30px rgba(18,16,12,.95); }
+.btn-line { border-color: rgba(18,16,12,.22); }
+
+/* 卡片：去掉生硬外框，改用細線＋極淡投影＋hover 浮起 */
+body main article,
+.set-card, .alc-card {
+  border: 1px solid rgba(18,16,12,.10) !important;
+  background: rgba(255,255,255,.72);
+  backdrop-filter: blur(2px);
+  transition: transform .55s cubic-bezier(.16,1,.3,1),
+              box-shadow .55s cubic-bezier(.16,1,.3,1),
+              border-color .4s ease;
+}
+body main article:hover,
+.set-card:hover, .alc-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(140,106,67,.35) !important;
+  box-shadow: 0 28px 60px -40px rgba(18,16,12,.55);
+}
+
+/* 圖片：預設略降飽和，hover 回到全彩（精品型錄的手法） */
+.media img { filter: saturate(.92) contrast(1.02); transition: transform .9s cubic-bezier(.16,1,.3,1), filter .6s ease; }
+body main article:hover .media img, .set-card:hover .media img { filter: saturate(1.02) contrast(1.03); }
+
+/* 標籤／chip：更細的邊、內距更寬 */
+.chip {
+  border-color: rgba(18,16,12,.16);
+  padding: .5rem .95rem;
+  transition: all .3s cubic-bezier(.16,1,.3,1);
+}
+.chip.on { background: var(--ink); border-color: var(--ink); }
+
+/* 群組框：拿掉底色塊，改成左側細金線 */
+.group-box {
+  background: transparent;
+  border: 0;
+  border-left: 1px solid rgba(140,106,67,.35);
+  border-radius: 0;
+  padding-left: 1rem;
+}
+.group-box.bad { border-left-color: rgba(216,55,44,.6); background: rgba(251,237,235,.5); padding-left: 1rem; }
+
+/* 表格與數字：全部走襯線等寬數字 */
+.num, .price, [data-price] { font-variant-numeric: tabular-nums; }
+
+/* 分隔線：更淡，讓留白主導 */
+.hairline { background: rgba(18,16,12,.10); }
+
+/* 抽屜與彈窗：加深陰影、圓角收斂 */
+#modalBox { box-shadow: 0 40px 140px -60px rgba(18,16,12,.85); }
+
+/* 手機：字距略收，避免擁擠 */
+@media (max-width: 640px) {
+  .caps { letter-spacing: .28em; }
+  .btn { letter-spacing: .18em; }
+  h1 { letter-spacing: .02em; }
+}
