@@ -604,7 +604,7 @@ function writeRowByHeader_(sh, rowIndex, values) {
   ORDER_HEADERS.forEach((h, i) => {
     const at = hdr.indexOf(h);
     if (at >= 0 && values[i] !== undefined && values[i] !== null) {
-      sh.getRange(rowIndex, at + 1).setValue(values[i]);
+      sh.getRange(rowIndex, at + 1).setValues([[values[i]]]);
     }
   });
 }
