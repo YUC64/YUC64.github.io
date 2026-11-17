@@ -44,6 +44,7 @@ const COL_CART = ORDER_HEADERS.indexOf('原始資料');
 const COL_CAR = ORDER_HEADERS.indexOf('車號');
 const COL_UPDATED = ORDER_HEADERS.indexOf('最後更新');
 
+const TABS = { ORDER_TAB: ORDER_TAB, ARCHIVE_TAB: ARCHIVE_TAB };
 var ci = { flag: COL_FLAG, cart: COL_CART, car: COL_CAR, updated: COL_UPDATED };   // 目前使用的欄位索引
 
 /** 依試算表「實際標題列」取得各欄索引（車號放哪一欄都能正確讀寫） */
@@ -519,7 +520,10 @@ function orderSheet_() {
  * 只回傳「最近的狀態」（同一訂單編號在表上只有一列）
  */
 function staffOrders_(p) {
-  try { ensureCarColumn_(orderSheet_().getSheetByName(ORDER_TAB)); } catch (e) {}
+  try {
+    const _ss = orderSheet_();
+    ['ORDER_TAB', 'ARCHIVE_TAB'].forEach(function (k) { ensureCarColumn_(_ss.getSheetByName(TABS[k])); });
+  } catch (e) {}
   const cache = CacheService.getScriptCache();
   if (cache.get('staffLock')) return jsonOut({ ok: false, error: 'locked' });
   if (String(p.pw || '') !== STAFF_PASSWORD) {
@@ -657,7 +661,10 @@ function staffSetEdit_(p) {
 
 /** 客人查自己的訂單（只回傳這支電話的，需驗證碼） */
 function myOrders_(p) {
-  try { ensureCarColumn_(orderSheet_().getSheetByName(ORDER_TAB)); } catch (e) {}
+  try {
+    const _ss = orderSheet_();
+    ['ORDER_TAB', 'ARCHIVE_TAB'].forEach(function (k) { ensureCarColumn_(_ss.getSheetByName(TABS[k])); });
+  } catch (e) {}
   const phone = normPhone(p.phone);
   const code = String(p.code || '').trim();
   if (!/^09\d{8}$/.test(phone)) return jsonOut({ ok: false, error: 'bad_phone' });
