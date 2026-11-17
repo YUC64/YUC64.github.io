@@ -32,7 +32,7 @@
     },
   };
 </script>
-<script>try{if(!sessionStorage.getItem('introShown'))document.documentElement.classList.add('intro-playing');}catch(e){}</script>
+<script>document.documentElement.classList.add('intro-playing');</script>
 <style>
 html.intro-playing .rise{animation-delay:calc(1.55s + var(--d, 0ms)) !important}
 html.intro-playing .rule-grow{animation-delay:calc(1.7s + var(--d, 0ms)) !important}
@@ -53,7 +53,7 @@ html.intro-playing .rule-grow{animation-delay:calc(1.7s + var(--d, 0ms)) !import
   #intro{display:none}
 }
 </style>
-<link rel="stylesheet" href="assets/css/style.css?v=20261125b">
+<link rel="stylesheet" href="assets/css/style.css?v=20261125c">
 </head>
 <body id="top" class="font-sans text-ink antialiased">
 
@@ -279,17 +279,15 @@ html.intro-playing .rule-grow{animation-delay:calc(1.7s + var(--d, 0ms)) !import
 
 <div id="toast" class="pointer-events-none fixed left-1/2 top-20 z-[70] hidden -translate-x-1/2 bg-ink px-6 py-3 text-[12px] tracking-[.14em] text-white/95"></div>
 
-<script src="js/config.js?v=20261125b"></script>
-<script src="js/data.js?v=20261125b"></script>
-<script src="js/app.js?v=20261125b"></script>
-<script src="js/lightbox.js?v=20261125b"></script>
+<script src="js/config.js?v=20261125c"></script>
+<script src="js/data.js?v=20261125c"></script>
+<script src="js/app.js?v=20261125c"></script>
+<script src="js/lightbox.js?v=20261125c"></script>
 <script src="js/auto-reload.js"></script>
 <script>
 (function(){
   var el = document.getElementById('intro');
   if (!el) return;
-  if (sessionStorage.getItem('introShown')) { el.remove(); return; }   // 同一次瀏覽只播一次
-  sessionStorage.setItem('introShown', '1');
   setTimeout(function(){ el.classList.add('done'); }, 1500);
   setTimeout(function(){ el.remove(); }, 2300);
 })();
