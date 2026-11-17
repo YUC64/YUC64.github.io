@@ -1382,9 +1382,6 @@ function showSuccess(record, delivered) {
       <div class="mt-4">
         <button id="btnGoOrders" class="btn btn-solid w-full text-[11.5px]">查看我的餐點</button>
       </div>
-      <p class="mt-3 text-[10px] leading-relaxed tracking-[.06em] text-ink-mute">
-        訂單已送出，內容如需更改請${tel('聯繫')}，由門市為您開啟修改。
-      </p>
     </div>`, {
     onMount: (root) => $('#btnGoOrders', root).addEventListener('click', () => { closeModal(); openMyOrders(); }),
   });
