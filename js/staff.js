@@ -241,8 +241,7 @@
       const bump = (k, n) => { const key = String(k || '').trim(); if (!key) return; count[key] = (count[key] || 0) + n; };
       live.forEach((o) => {
         // 套餐內容裡的「飲料：A（冰）、A（去冰）」
-        String(o.sets || '').split('
-').forEach((line) => {
+        String(o.sets || '').split(String.fromCharCode(10)).forEach((line) => {
           const t = line.replace(/^　+/, '');
           if (t.indexOf('飲料：') !== 0) return;
           t.slice(3).split('、').map((x) => x.trim()).filter(Boolean).forEach((d) => {
