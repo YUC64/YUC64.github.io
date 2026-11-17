@@ -24,7 +24,7 @@
     } },
   };
 </script>
-<link rel="stylesheet" href="assets/css/style.css?v=20261122a">
+<link rel="stylesheet" href="assets/css/style.css?v=20261122b">
 <style>
   /* 只有看板用得到的樣式 */
   .kpi { border: 1px solid var(--line); background: #fff; padding: 1.1rem 1.25rem; }
@@ -54,7 +54,7 @@
     header, .no-print, footer, #staffLock, #btnPrint, #btnExport, #btnKitchen,
     #btnRefresh, #search, #sortBy, #tabs, #autoRefresh { display: none !important; }
     html, body { background: #fff !important; height: auto !important; overflow: visible !important; }
-    .kpi { border: 1px solid #ccc !important; }
+    .kpi, #staffApp .grid.grid-cols-2 > .kpi, .no-print-kpi { display: none !important; }
     .row { break-inside: avoid; page-break-inside: avoid; border: 1px solid #ddd !important;
            margin-bottom: 6px; padding: 8px 10px !important; box-shadow: none !important; }
     .detail { display: block !important; overflow: visible !important; max-height: none !important; }
@@ -163,8 +163,8 @@
   </footer>
 </div>
 
-<script src="js/config.js?v=20261122a"></script>
-<script src="js/staff.js?v=20261122a"></script>
-  <script src="js/staff-kitchen.js?v=20261122a"></script>
+<script src="js/config.js?v=20261122b"></script>
+<script src="js/staff.js?v=20261122b"></script>
+  <script src="js/staff-kitchen.js?v=20261122b"></script>
 </body>
 </html>
