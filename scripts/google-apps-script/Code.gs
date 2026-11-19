@@ -618,7 +618,7 @@ function staffOrders_(p) {
       note: String(r[13] || '').trim(),
       updated: tsStr_(r[ci.updated]),
       car: String(r[ci.car] || '').trim(),
-      slot: String(r[20] || '').trim()   /* 用餐時段＝訂單分頁第 21 欄（U） */,
+      slot: slotStr_(r[20])   /* 用餐時段＝訂單分頁第 21 欄（U） */,
       editable: String(r[ci.flag] || '').trim() === 'open',
       src: src.tab,
     });
@@ -744,7 +744,9 @@ function staffSetSlot_(p) {
     }
     for (let i = rows.length - 1; i >= 0; i--) {
       if (String(rows[i][0] || '').trim() === oid) {
-        sh.getRange(i + 2, at + 1).setValues([[slot]]);
+        const cell = sh.getRange(i + 2, at + 1);
+        cell.setNumberFormat('@');            // 強制文字，避免 19:30 被轉成時間
+        cell.setValues([[slot]]);
         return jsonOut({ ok: true, orderId: oid, slot: slot, tab: tabs[t] });
       }
     }
@@ -820,7 +822,7 @@ function myOrders_(p) {
         note: String(r[13] || '').trim(),
         updated: tsStr_(r[ci.updated]),
         car: String(r[ci.car] || '').trim(),
-      slot: String(r[20] || '').trim()   /* 用餐時段＝訂單分頁第 21 欄（U） */,
+      slot: slotStr_(r[20])   /* 用餐時段＝訂單分頁第 21 欄（U） */,
         editable: String(r[ci.flag] || '').trim() === 'open',
         cart: parseCart_(r[ci.cart]),
       });
