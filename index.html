@@ -101,12 +101,12 @@ html.intro-playing .rule-grow{animation-delay:calc(3.6s + var(--d, 0ms)) !import
 .caustics span:nth-child(3){width:38vw;height:38vw;left:32%;bottom:6%;
   background:radial-gradient(circle,rgba(140,106,67,.40),transparent 72%);animation:drift3 25s ease-in-out infinite}
 
-.liquid{position:absolute;left:-10%;right:-10%;bottom:0;height:34%;z-index:0;pointer-events:none;
-  opacity:0;animation:introFadeIn 1.4s ease .45s forwards}
+.liquid{position:absolute;left:-10%;right:-10%;bottom:0;height:42%;z-index:0;pointer-events:none;
+  opacity:0;animation:introFadeIn 1.6s ease .45s forwards;filter:blur(.4px)}
 .liquid .wave{position:absolute;bottom:0;left:-50%;width:200%;height:100%}
-.liquid .wave path{fill:url(#liqGrad)}
-.liquid .w1{opacity:.55;animation:waveMove 11s linear infinite}
-.liquid .w2{opacity:.85;animation:waveMove 7.5s linear infinite reverse}
+.liquid .wave path{fill:url(#liqGrad);stroke:rgba(243,228,192,.22);stroke-width:1}
+.liquid .w1{opacity:.7;animation:waveMove 11s linear infinite}
+.liquid .w2{opacity:1;animation:waveMove 7.5s linear infinite reverse}
 
 /* ── 進度條 ── */
 .progress{width:min(248px,58vw);margin-top:clamp(10px,2.4vw,16px);opacity:0;
@@ -143,7 +143,7 @@ html.intro-playing .rule-grow{animation-delay:calc(3.6s + var(--d, 0ms)) !import
   #intro.out{opacity:0}
 }
 </style>
-<link rel="stylesheet" href="assets/css/style.css?v=20261201b">
+<link rel="stylesheet" href="assets/css/style.css?v=20261201c">
 </head>
 <body id="top" class="font-sans text-ink antialiased">
 
@@ -154,9 +154,9 @@ html.intro-playing .rule-grow{animation-delay:calc(3.6s + var(--d, 0ms)) !import
     <svg class="wave w1" viewBox="0 0 1440 220" preserveAspectRatio="none">
       <defs>
         <linearGradient id="liqGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stop-color="#C87F3A" stop-opacity=".5"></stop>
-          <stop offset=".55" stop-color="#A9762F" stop-opacity=".28"></stop>
-          <stop offset="1" stop-color="#8C6A43" stop-opacity="0"></stop>
+          <stop offset="0" stop-color="#D98E3C" stop-opacity=".62"></stop>
+          <stop offset=".55" stop-color="#A9762F" stop-opacity=".34"></stop>
+          <stop offset="1" stop-color="#8C6A43" stop-opacity=".06"></stop>
         </linearGradient>
       </defs>
       <path d="M0,140 C180,88 360,192 540,140 C720,88 900,192 1080,140 C1260,88 1360,152 1440,132 L1440,220 L0,220 Z"></path>
@@ -406,10 +406,10 @@ html.intro-playing .rule-grow{animation-delay:calc(3.6s + var(--d, 0ms)) !import
 
 <div id="toast" class="pointer-events-none fixed left-1/2 top-20 z-[70] hidden -translate-x-1/2 bg-ink px-6 py-3 text-[12px] tracking-[.14em] text-white/95"></div>
 
-<script src="js/config.js?v=20261201b"></script>
-<script src="js/data.js?v=20261201b"></script>
-<script src="js/app.js?v=20261201b"></script>
-<script src="js/lightbox.js?v=20261201b"></script>
+<script src="js/config.js?v=20261201c"></script>
+<script src="js/data.js?v=20261201c"></script>
+<script src="js/app.js?v=20261201c"></script>
+<script src="js/lightbox.js?v=20261201c"></script>
 <script src="js/auto-reload.js"></script>
 <script>
 (function(){
