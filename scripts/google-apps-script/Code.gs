@@ -618,7 +618,7 @@ function staffOrders_(p) {
       note: String(r[13] || '').trim(),
       updated: tsStr_(r[ci.updated]),
       car: String(r[ci.car] || '').trim(),
-      slot: ci.slot >= 0 ? String(r[ci.slot] || '').trim() : '',
+      slot: String(r[20] || '').trim()   /* 用餐時段＝訂單分頁第 21 欄（U） */,
       editable: String(r[ci.flag] || '').trim() === 'open',
       src: src.tab,
     });
@@ -820,7 +820,7 @@ function myOrders_(p) {
         note: String(r[13] || '').trim(),
         updated: tsStr_(r[ci.updated]),
         car: String(r[ci.car] || '').trim(),
-      slot: ci.slot >= 0 ? String(r[ci.slot] || '').trim() : '',
+      slot: String(r[20] || '').trim()   /* 用餐時段＝訂單分頁第 21 欄（U） */,
         editable: String(r[ci.flag] || '').trim() === 'open',
         cart: parseCart_(r[ci.cart]),
       });
