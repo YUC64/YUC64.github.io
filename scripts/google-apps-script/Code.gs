@@ -597,8 +597,8 @@ function staffOrders_(p) {
     if (last < 2) return;
     sources.push({
       tab: name,
-      rows: sh.getRange(2, 1, last - 1, ORDER_HEADERS.length).getValues(),
-      disp: sh.getRange(2, 1, last - 1, ORDER_HEADERS.length).getDisplayValues(),
+      rows: sh.getRange(2, 1, last - 1, Math.max(sh.getLastColumn(), ORDER_HEADERS.length)).getValues(),
+      disp: sh.getRange(2, 1, last - 1, Math.max(sh.getLastColumn(), ORDER_HEADERS.length)).getDisplayValues(),
     });
   });
   if (!sources.length) return jsonOut({ ok: true, count: 0, orders: [], updatedAt: new Date().toISOString() });
