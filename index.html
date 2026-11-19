@@ -50,10 +50,14 @@ html.intro-playing .rule-grow{animation-delay:calc(1.7s + var(--d, 0ms)) !import
 @keyframes introLine{to{width:190px}}
 @keyframes introWord{to{opacity:1}}
 @media (prefers-reduced-motion: reduce){
-  #intro{display:none}
+  /* 手機若開啟「減少動態效果」，仍保留開場（只淡入、不位移、不拉線） */
+  #intro .intro-mark{transform:none !important;animation:introFade 1s ease .05s forwards}
+  #intro .intro-line{width:190px !important;opacity:0;animation:introFade 1s ease .3s forwards}
+  #intro .intro-word{transform:none !important;animation:introFade 1s ease .55s forwards}
+  @keyframes introFade{to{opacity:1}}
 }
 </style>
-<link rel="stylesheet" href="assets/css/style.css?v=20261128c">
+<link rel="stylesheet" href="assets/css/style.css?v=20261129a">
 </head>
 <body id="top" class="font-sans text-ink antialiased">
 
@@ -279,10 +283,10 @@ html.intro-playing .rule-grow{animation-delay:calc(1.7s + var(--d, 0ms)) !import
 
 <div id="toast" class="pointer-events-none fixed left-1/2 top-20 z-[70] hidden -translate-x-1/2 bg-ink px-6 py-3 text-[12px] tracking-[.14em] text-white/95"></div>
 
-<script src="js/config.js?v=20261128c"></script>
-<script src="js/data.js?v=20261128c"></script>
-<script src="js/app.js?v=20261128c"></script>
-<script src="js/lightbox.js?v=20261128c"></script>
+<script src="js/config.js?v=20261129a"></script>
+<script src="js/data.js?v=20261129a"></script>
+<script src="js/app.js?v=20261129a"></script>
+<script src="js/lightbox.js?v=20261129a"></script>
 <script src="js/auto-reload.js"></script>
 <script>
 (function(){
