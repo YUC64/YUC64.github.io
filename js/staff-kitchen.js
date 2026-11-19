@@ -1,8 +1,6 @@
 /**
- * 內場出單：把所有有效訂單的「菜色份數」彙總成一張清單
- *   - 只輸出「菜名 → 幾份」
- *   - 辣／不辣分開列
- *   - 不顯示套餐份數、訂單清單、附贈/套餐/單點等分類
+ * 內場出單：依「用餐時段」分組，統計 each 菜色份數（辣／不辣分開）
+ *   時段由門市在訂單表「用餐時段」欄手動填（17:00 / 19:30 …）
  */
 (function () {
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -51,12 +49,22 @@
     return mm ? { name: mm[1].trim(), mild: true } : { name: String(v).trim(), mild: false };
   }
 
+  /* 回傳 { '17:00': { rows:[…], orders:n, total:m }, ... } */
   function build() {
     const orders = (window.__staffOrders || []).filter((o) => o.status !== '已取消');
-    const count = {};
-    const bump = (name, n) => { const k = String(name).trim(); if (!k) return; count[k] = (count[k] || 0) + n; };
+    const slots = {};
+    const ensure = (k) => { if (!slots[k]) slots[k] = { count: {}, orders: 0, total: 0 }; return slots[k]; };
 
     orders.forEach((o) => {
+      const slot = String(o.slot || '').trim() || '未指定時段';
+      const g = ensure(slot);
+      g.orders += 1;
+      const bump = (name, n) => {
+        const k = String(name).trim();
+        if (!k) return;
+        g.count[k] = (g.count[k] || 0) + n;
+        g.total += n;
+      };
       parseSets(o.sets).forEach((st) => {
         st.groups.forEach((vals) => vals.forEach((v) => {
           const p = splitMild(v);
@@ -69,34 +77,50 @@
         st.drinks.forEach((d) => bump(norm(d).replace('(', '（').replace(')', '）'), st.qty));
       });
       parseAlc(o.alacarte).forEach((a) => {
-        const mild = a.tag === '不辣';
-        const suffix = mild ? '（不辣）' : (a.tag ? '（' + a.tag + '）' : '');
+        const suffix = a.tag === '不辣' ? '（不辣）' : (a.tag ? '（' + a.tag + '）' : '');
         bump(a.name + suffix, a.qty);
       });
     });
 
-    const rows = Object.entries(count).map(([name, qty]) => {
-      const mild = /（不辣）$/.test(name);
-      return { name, qty, mild, group: name.replace(/（不辣）$/, '') };
-    }).sort((a, b) => (a.group === b.group ? (a.mild - b.mild) : (a.group < b.group ? -1 : 1)));
+    // 每個時段內排序：同菜名相鄰、辣的在前
+    Object.keys(slots).forEach((k) => {
+      slots[k].rows = Object.entries(slots[k].count).map(([name, qty]) => {
+        const mild = /（不辣）$/.test(name);
+        return { name, qty, mild, group: name.replace(/（不辣）$/, '') };
+      }).sort((a, b) => (a.group === b.group ? (a.mild - b.mild) : (a.group < b.group ? -1 : 1)));
+    });
 
-    const total = rows.reduce((s, r) => s + r.qty, 0);
-    return { orders, rows, total };
+    // 時段排序：有時間的照時間，未指定放最後
+    const keys = Object.keys(slots).sort((a, b) => {
+      if (a === '未指定時段') return 1;
+      if (b === '未指定時段') return -1;
+      return a < b ? -1 : 1;
+    });
+    return { slots, keys, orderCount: orders.length };
   }
 
   function html() {
     const k = build();
     const now = new Date().toLocaleString('zh-TW', { hour12: false });
-    const list = k.rows.map((r) => `<div class="kk-row${r.mild ? ' kk-mildrow' : ''}">
-        <span class="kk-name">${esc(r.group)}${r.mild ? '<span class="kk-tag">不辣</span>' : ''}</span>
-        <span class="kk-qty">${r.qty}</span>
-      </div>`).join('');
+    const totalAll = k.keys.reduce((s, key) => s + k.slots[key].total, 0);
+
+    const sections = k.keys.map((key) => {
+      const g = k.slots[key];
+      const rows = g.rows.map((r) => `<div class="kk-row${r.mild ? ' kk-mildrow' : ''}">
+          <span class="kk-name">${esc(r.group)}${r.mild ? '<span class="kk-tag">不辣</span>' : ''}</span>
+          <span class="kk-qty">${r.qty}</span>
+        </div>`).join('');
+      return `<section class="kk-slot">
+          <h3 class="kk-slothead">${esc(key)}<span class="kk-slotmeta">${g.orders} 張・${g.total} 份</span></h3>
+          ${rows || '<p class="kk-empty">（此為空）</p>'}
+        </section>`;
+    }).join('');
 
     return `<div class="kk-head">
         <div>
           <p class="caps">Kitchen</p>
           <h2>內場出單</h2>
-          <p class="kk-sub">${esc(now)}・有效訂單 ${k.orders.length} 張・共 ${k.total} 份</p>
+          <p class="kk-sub">${esc(now)}・有效訂單 ${k.orderCount} 張・共 ${totalAll} 份</p>
         </div>
         <div class="kk-actions">
           <button data-kk-print>列印</button>
@@ -104,7 +128,7 @@
         </div>
       </div>
       <div class="kk-body">
-        ${k.rows.length ? list : '<p class="kk-empty">目前沒有有效訂單</p>'}
+        ${k.keys.length ? sections : '<p class="kk-empty">目前沒有有效訂單</p>'}
       </div>`;
   }
 
@@ -124,7 +148,7 @@
     }
     p.innerHTML = html();
     p.classList.add('open');
-    document.body.classList.add('kk-printing');   // 讓列印只輸出出單表
+    document.body.classList.add('kk-printing');
   }
 
   function mountBtn() {
@@ -161,6 +185,11 @@
     .kk-actions button:hover{background:#17140F;color:#fff}
     .kk-body{background:#fff;border:1px solid rgba(23,20,15,.14);max-width:760px;margin:0 auto;
       padding:8px 18px 22px;overflow:auto;max-height:calc(100vh - 150px)}
+    .kk-slot{margin-top:14px}
+    .kk-slothead{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+      font-size:15px;font-weight:800;letter-spacing:.08em;color:#17140F;
+      border-bottom:2px solid #17140F;padding-bottom:6px;margin-bottom:2px}
+    .kk-slotmeta{font-size:10.5px;font-weight:400;letter-spacing:.06em;color:#6b6357}
     .kk-row{display:flex;align-items:baseline;justify-content:space-between;gap:14px;
       padding:11px 0;border-bottom:1px dashed rgba(23,20,15,.1);font-size:16px}
     .kk-name{flex:1;min-width:0;font-weight:600}
@@ -168,12 +197,11 @@
     .kk-mildrow .kk-name{color:#6b6357}
     .kk-tag{display:inline-block;margin-left:7px;font-size:10px;font-weight:700;color:#A67C52;
       border:1px solid rgba(166,124,82,.55);padding:1px 6px;border-radius:99px;vertical-align:2px}
-    .kk-empty{padding:24px 0;text-align:center;color:#6b6357;font-size:12px}
+    .kk-empty{padding:16px 0;text-align:center;color:#6b6357;font-size:12px}
     @media print{
       @page{margin:14mm}
       html,body{background:#fff !important;height:auto !important;overflow:visible !important}
     }
-    /* 只有在「內場出單」開啟時，列印才只輸出出單表（不影響訂單看板的列印） */
     @media print{
       body.kk-printing #staffLock, body.kk-printing #staffApp,
       body.kk-printing > *:not(#kitchenPanel){display:none !important}
@@ -188,9 +216,8 @@
       body.kk-printing .kk-actions{display:none !important}
       body.kk-printing .kk-row{font-size:14px;padding:7px 0;break-inside:avoid;page-break-inside:avoid}
       body.kk-printing .kk-qty{font-size:16px}
-      body.kk-printing .kk-tag{border-color:#A67C52;color:#A67C52}
-    }
-  }`;
+      body.kk-printing .kk-slot{break-inside:avoid}
+    }`;
     document.head.appendChild(st);
   }
 

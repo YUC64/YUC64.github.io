@@ -76,6 +76,7 @@ const ORDER_HEADERS = [
   '套餐內容', '套餐金額', '單點內容', '單點金額', '服務費', '總金額', '備註', '車號', '最後更新',
   '修改權限',   // 員工按「開放修改」時填 open，客人改完一次自動收回
   '原始資料',   // 前端購物車 JSON（讓客人換裝置也能載回內容修改）
+  '用餐時段',   // 門市手動輸入（17:00 / 19:30），供內場出單分時段統計
 ];
 const COL_FLAG = ORDER_HEADERS.indexOf('修改權限');   // 依標題動態取得，避免新增欄位時錯位
 const COL_CART = ORDER_HEADERS.indexOf('原始資料');
@@ -101,6 +102,7 @@ function colIdx_(sh) {
     cart: at('原始資料', COL_CART),
     car: at('車號', COL_CAR, ['車牌', '車號', '車']),
     updated: at('最後更新', COL_UPDATED),
+    slot: at('用餐時段', -1),
   };
 }
 
@@ -615,6 +617,7 @@ function staffOrders_(p) {
       note: String(r[13] || '').trim(),
       updated: tsStr_(r[ci.updated]),
       car: String(r[ci.car] || '').trim(),
+      slot: ci.slot >= 0 ? String(r[ci.slot] || '').trim() : '',
       editable: String(r[ci.flag] || '').trim() === 'open',
       src: src.tab,
     });
@@ -785,6 +788,7 @@ function myOrders_(p) {
         note: String(r[13] || '').trim(),
         updated: tsStr_(r[ci.updated]),
         car: String(r[ci.car] || '').trim(),
+      slot: ci.slot >= 0 ? String(r[ci.slot] || '').trim() : '',
         editable: String(r[ci.flag] || '').trim() === 'open',
         cart: parseCart_(r[ci.cart]),
       });

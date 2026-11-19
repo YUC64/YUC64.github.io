@@ -228,6 +228,7 @@
           <div><dt class="inline text-ink-mute">單點金額：</dt><dd class="inline mono">${money(o.alacarteTotal)}</dd></div>
           <div><dt class="inline text-ink-mute">服務費：</dt><dd class="inline mono">${money(o.service)}</dd></div>
           <div><dt class="inline text-ink-mute">總計：</dt><dd class="inline mono font-medium">${money(o.total)}</dd></div>
+          <div><dt class="inline text-ink-mute">用餐時段：</dt><dd class="inline font-bold">${esc(o.slot) || '<span class="text-thai-red">—（未填）</span>'}</dd></div>
           <div class="sm:col-span-2"><dt class="inline text-ink-mute">車號：</dt><dd class="inline font-bold">${esc(o.car) || '—'}</dd></div>
           <div class="sm:col-span-2"><dt class="inline text-ink-mute">備註：</dt><dd class="inline">${esc(o.note) || '—'}</dd></div>
           <div class="sm:col-span-2"><dt class="inline text-ink-mute">動作／更新：</dt><dd class="inline">${esc(o.action) || '—'}・${esc(o.updated) || '—'}</dd></div>
