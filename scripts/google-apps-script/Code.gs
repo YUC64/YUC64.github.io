@@ -295,6 +295,7 @@ function doGet(e) {
     if (p.setupstaff) return staffSetup_(p);
     if (p.peek) return staffPeek_(p);
     if (p.fix) return staffFixSheets_(p);
+    if (p.setslot) return staffSetSlot_(p);
     if (p.setedit) return staffSetEdit_(p);
     if (p.delorder) return staffDeleteOrder_(p);
     return staffOrders_(p);
@@ -718,6 +719,37 @@ function staffPeek_(p) {
     out[name] = { cols: hdr.length, header: hdr, firstRow: first, idx: colIdx_(sh) };
   });
   return jsonOut({ ok: true, tabs: out });
+}
+
+/** 員工：設定某張訂單的用餐時段（GET ?staff=1&pw=&setslot=<訂單編號>&slot=17:00） */
+function staffSetSlot_(p) {
+  if (!staffOk_(p.pw)) return jsonOut({ ok: false, error: 'bad_password' });
+  const oid = String(p.setslot || '').trim();
+  if (!oid) return jsonOut({ ok: false, error: 'no_order_id' });
+  const slot = String(p.slot === undefined ? '' : p.slot).trim();
+  const ss = orderSheet_();
+  const tabs = [ORDER_TAB, ARCHIVE_TAB];
+  for (let t = 0; t < tabs.length; t++) {
+    const sh = ss.getSheetByName(tabs[t]);
+    if (!sh) continue;
+    const last = sh.getLastRow();
+    if (last < 2) continue;
+    const lastCol = Math.max(sh.getLastColumn(), ORDER_HEADERS.length);
+    const rows = sh.getRange(2, 1, last - 1, lastCol).getValues();
+    const hdr = sh.getRange(1, 1, 1, lastCol).getValues()[0].map(function (v) { return String(v || '').trim(); });
+    let at = hdr.indexOf('用餐時段');
+    if (at < 0) {                       // 沒有這一欄就自動補在最右邊
+      at = lastCol;
+      sh.getRange(1, at + 1).setValues([['用餐時段']]);
+    }
+    for (let i = rows.length - 1; i >= 0; i--) {
+      if (String(rows[i][0] || '').trim() === oid) {
+        sh.getRange(i + 2, at + 1).setValues([[slot]]);
+        return jsonOut({ ok: true, orderId: oid, slot: slot, tab: tabs[t] });
+      }
+    }
+  }
+  return jsonOut({ ok: false, error: 'order_not_found' });
 }
 
 /** 員工：開放／收回某張訂單的修改權限（GET，回 {ok, editable}） */

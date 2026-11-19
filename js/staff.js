@@ -228,7 +228,11 @@
           <div><dt class="inline text-ink-mute">單點金額：</dt><dd class="inline mono">${money(o.alacarteTotal)}</dd></div>
           <div><dt class="inline text-ink-mute">服務費：</dt><dd class="inline mono">${money(o.service)}</dd></div>
           <div><dt class="inline text-ink-mute">總計：</dt><dd class="inline mono font-medium">${money(o.total)}</dd></div>
-          <div><dt class="inline text-ink-mute">用餐時段：</dt><dd class="inline font-bold">${esc(o.slot) || '<span class="text-thai-red">—（未填）</span>'}</dd></div>
+          <div><dt class="inline text-ink-mute">用餐時段：</dt><dd class="inline">
+            <select data-slot-for="${esc(o.orderId)}" class="w-auto cursor-pointer border border-[rgba(23,20,15,.25)] bg-white font-bold outline-none" style="padding:.3rem 1.6rem .3rem .6rem;font-size:12px">
+              ${['', '17:00', '17:15', '17:30', '17:45', '18:00', '18:30', '19:00', '19:15', '19:30', '19:45', '20:00'].map((v) => `<option value="${v}"${(o.slot || '') === v ? ' selected' : ''}>${v || '未指定'}</option>`).join('')}
+            </select>
+          </dd></div>
           <div class="sm:col-span-2"><dt class="inline text-ink-mute">車號：</dt><dd class="inline font-bold">${esc(o.car) || '—'}</dd></div>
           <div class="sm:col-span-2"><dt class="inline text-ink-mute">備註：</dt><dd class="inline">${esc(o.note) || '—'}</dd></div>
           <div class="sm:col-span-2"><dt class="inline text-ink-mute">動作／更新：</dt><dd class="inline">${esc(o.action) || '—'}・${esc(o.updated) || '—'}</dd></div>
@@ -359,6 +363,32 @@
     $('#autoRefresh').addEventListener('change', startAuto);
     $('#search').addEventListener('input', (e) => { S.q = e.target.value; render(); });
     $('#sortBy').addEventListener('change', (e) => { S.sort = e.target.value; render(); });
+
+    // 用餐時段：選了就立刻存回試算表
+    $('#list').addEventListener('change', async (e) => {
+      const sel = e.target.closest('[data-slot-for]');
+      if (!sel) return;
+      const oid = sel.dataset.slotFor;
+      const slot = sel.value;
+      sel.disabled = true;
+      try {
+        const url = `${ENDPOINT}?staff=1&pw=${encodeURIComponent(S.pw)}&setslot=${encodeURIComponent(oid)}&slot=${encodeURIComponent(slot)}&t=${Date.now()}`;
+        const res = await fetch(url, { cache: 'no-store' });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error || 'failed');
+        await refresh();
+        const box = $('#errBox');
+        box.classList.remove('hidden');
+        box.className = 'mt-4 border border-thai-green/30 bg-thai-green/5 px-4 py-3 text-[11.5px] leading-relaxed text-thai-green';
+        box.innerHTML = `已將 <b>${esc(oid)}</b> 的用餐時段設為 <b>${esc(slot || '未指定')}</b>`;
+      } catch (err) {
+        sel.disabled = false;
+        const box = $('#errBox');
+        box.classList.remove('hidden');
+        box.className = 'mt-4 border border-thai-red/30 bg-thai-red/5 px-4 py-3 text-[11.5px] leading-relaxed text-thai-red';
+        box.textContent = `設定失敗：${err.message}（請確認 Code.gs 已更新並重新部署）`;
+      }
+    });
     $('#list').addEventListener('click', async (e) => {
       // 刪除訂單（客人的單會被移掉，之後可以重新點餐）
       const del = e.target.closest('[data-del-order]');
