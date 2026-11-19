@@ -62,8 +62,10 @@ html.intro-playing .rule-grow{animation-delay:calc(3.1s + var(--d, 0ms)) !import
 .intro-mark{width:56%;height:auto;opacity:0;transform:scale(.84);
   animation:introMark 1.4s cubic-bezier(.16,1,.3,1) .12s forwards}
 .sheen{position:absolute;inset:-20% -35%;pointer-events:none;opacity:0;
-  background:linear-gradient(105deg,transparent 38%,rgba(255,242,212,.62) 50%,transparent 62%);
-  mix-blend-mode:screen;animation:introSheen 1.6s ease 1.25s 1 forwards}
+  background:linear-gradient(105deg,transparent 40%,rgba(255,242,212,.5) 50%,transparent 60%);
+  -webkit-mask-image:radial-gradient(closest-side,#000 42%,rgba(0,0,0,.5) 68%,transparent 100%);
+  mask-image:radial-gradient(closest-side,#000 42%,rgba(0,0,0,.5) 68%,transparent 100%);
+  mix-blend-mode:screen;animation:introSheen 1.7s ease 1.3s 1 forwards}
 
 .intro-line{display:block;height:1px;width:0;
   background:linear-gradient(90deg,transparent,#8C6A43 22%,#F3E4C0 50%,#8C6A43 78%,transparent);
@@ -88,7 +90,7 @@ html.intro-playing .rule-grow{animation-delay:calc(3.1s + var(--d, 0ms)) !import
 @keyframes introChar{to{opacity:1;transform:none}}
 @keyframes introFadeIn{to{opacity:1}}
 @keyframes introSheen{0%{opacity:0;transform:translateX(-55%)}
-  22%{opacity:.95}
+  22%{opacity:.55}
   100%{opacity:0;transform:translateX(55%)}}
 
 /* 減少動態效果：同樣的順序，只淡入不位移 */
@@ -106,7 +108,7 @@ html.intro-playing .rule-grow{animation-delay:calc(3.1s + var(--d, 0ms)) !import
   #intro.out{opacity:0}
 }
 </style>
-<link rel="stylesheet" href="assets/css/style.css?v=20261130a">
+<link rel="stylesheet" href="assets/css/style.css?v=20261130b">
 </head>
 <body id="top" class="font-sans text-ink antialiased">
 
@@ -350,10 +352,10 @@ html.intro-playing .rule-grow{animation-delay:calc(3.1s + var(--d, 0ms)) !import
 
 <div id="toast" class="pointer-events-none fixed left-1/2 top-20 z-[70] hidden -translate-x-1/2 bg-ink px-6 py-3 text-[12px] tracking-[.14em] text-white/95"></div>
 
-<script src="js/config.js?v=20261130a"></script>
-<script src="js/data.js?v=20261130a"></script>
-<script src="js/app.js?v=20261130a"></script>
-<script src="js/lightbox.js?v=20261130a"></script>
+<script src="js/config.js?v=20261130b"></script>
+<script src="js/data.js?v=20261130b"></script>
+<script src="js/app.js?v=20261130b"></script>
+<script src="js/lightbox.js?v=20261130b"></script>
 <script src="js/auto-reload.js"></script>
 <script>
 (function(){
