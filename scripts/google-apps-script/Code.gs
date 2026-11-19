@@ -83,6 +83,15 @@ const COL_CART = ORDER_HEADERS.indexOf('原始資料');
 const COL_CAR = ORDER_HEADERS.indexOf('車號');
 const COL_UPDATED = ORDER_HEADERS.indexOf('最後更新');
 
+/* 用餐時段：Sheets 可能把它存成時間 → 轉回 19:30 這種字串 */
+function slotStr_(v) {
+  if (v === null || v === undefined || v === '') return '';
+  if (Object.prototype.toString.call(v) === '[object Date]') {
+    return ('0' + v.getHours()).slice(-2) + ':' + ('0' + v.getMinutes()).slice(-2);
+  }
+  return String(v).trim();
+}
+
 const TABS = { ORDER_TAB: ORDER_TAB, ARCHIVE_TAB: ARCHIVE_TAB };
 var ci = { flag: COL_FLAG, cart: COL_CART, car: COL_CAR, updated: COL_UPDATED };   // 目前使用的欄位索引
 
