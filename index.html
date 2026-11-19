@@ -61,11 +61,9 @@ html.intro-playing .rule-grow{animation-delay:calc(3.1s + var(--d, 0ms)) !import
   animation:introRing 1.6s cubic-bezier(.4,0,.2,1) .6s forwards}
 .intro-mark{width:56%;height:auto;opacity:0;transform:scale(.84);
   animation:introMark 1.4s cubic-bezier(.16,1,.3,1) .12s forwards}
-.sheen{position:absolute;inset:-20% -35%;pointer-events:none;opacity:0;
-  background:linear-gradient(105deg,transparent 40%,rgba(255,242,212,.5) 50%,transparent 60%);
-  -webkit-mask-image:radial-gradient(closest-side,#000 42%,rgba(0,0,0,.5) 68%,transparent 100%);
-  mask-image:radial-gradient(closest-side,#000 42%,rgba(0,0,0,.5) 68%,transparent 100%);
-  mix-blend-mode:screen;animation:introSheen 1.7s ease 1.3s 1 forwards}
+.markwrap::before{content:"";position:absolute;inset:4%;border-radius:50%;pointer-events:none;opacity:0;
+  background:radial-gradient(circle,rgba(214,178,110,.34) 0%,rgba(214,178,110,.12) 46%,transparent 74%);
+  filter:blur(6px);animation:introFadeIn 1.3s ease .55s forwards}
 
 .intro-line{display:block;height:1px;width:0;
   background:linear-gradient(90deg,transparent,#8C6A43 22%,#F3E4C0 50%,#8C6A43 78%,transparent);
@@ -84,7 +82,7 @@ html.intro-playing .rule-grow{animation-delay:calc(3.1s + var(--d, 0ms)) !import
 
 @keyframes introMark{0%{opacity:0;transform:scale(.84);filter:blur(18px) brightness(1.9)}
   55%{opacity:1}
-  100%{opacity:1;transform:scale(1);filter:blur(0) brightness(1) drop-shadow(0 0 26px rgba(201,169,106,.42))}}
+  100%{opacity:1;transform:scale(1);filter:blur(0) brightness(1.05)}}
 @keyframes introRing{to{stroke-dashoffset:0}}
 @keyframes introLine{to{width:clamp(180px,56vw,250px)}}
 @keyframes introChar{to{opacity:1;transform:none}}
@@ -102,13 +100,12 @@ html.intro-playing .rule-grow{animation-delay:calc(3.1s + var(--d, 0ms)) !import
   .intro-word span{animation:introFadeIn .8s ease forwards !important;
     animation-delay:calc(1.35s + var(--i) * .04s) !important;transform:none !important}
   .intro-sub{animation-delay:1.95s !important}
-  .sheen{display:none !important}
   #intro.out .curtain.t,#intro.out .curtain.b{transform:none !important}
   #intro{transition:opacity .6s ease}
   #intro.out{opacity:0}
 }
 </style>
-<link rel="stylesheet" href="assets/css/style.css?v=20261130b">
+<link rel="stylesheet" href="assets/css/style.css?v=20261130c">
 </head>
 <body id="top" class="font-sans text-ink antialiased">
 
@@ -129,7 +126,6 @@ html.intro-playing .rule-grow{animation-delay:calc(3.1s + var(--d, 0ms)) !import
         <circle cx="100" cy="100" r="74"></circle>
       </svg>
       <img src="assets/img/logo-mark.png" alt="" class="intro-mark">
-      <span class="sheen"></span>
     </div>
     <span class="intro-line"></span>
     <p class="intro-word" data-text="SIAM MORE"></p>
@@ -352,10 +348,10 @@ html.intro-playing .rule-grow{animation-delay:calc(3.1s + var(--d, 0ms)) !import
 
 <div id="toast" class="pointer-events-none fixed left-1/2 top-20 z-[70] hidden -translate-x-1/2 bg-ink px-6 py-3 text-[12px] tracking-[.14em] text-white/95"></div>
 
-<script src="js/config.js?v=20261130b"></script>
-<script src="js/data.js?v=20261130b"></script>
-<script src="js/app.js?v=20261130b"></script>
-<script src="js/lightbox.js?v=20261130b"></script>
+<script src="js/config.js?v=20261130c"></script>
+<script src="js/data.js?v=20261130c"></script>
+<script src="js/app.js?v=20261130c"></script>
+<script src="js/lightbox.js?v=20261130c"></script>
 <script src="js/auto-reload.js"></script>
 <script>
 (function(){
