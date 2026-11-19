@@ -38,9 +38,9 @@ html.intro-playing .rise{animation-delay:calc(2.8s + var(--d,0ms)) !important}
 html.intro-playing .rule-grow{animation-delay:calc(2.9s + var(--d,0ms)) !important}
 
 #intro{position:fixed;inset:0;z-index:9999;overflow:hidden;display:grid;place-items:center;
-  background:#0E0C09;transition:opacity .45s ease;--lw:132px;
+  background:transparent;--lw:132px;
   -webkit-backface-visibility:hidden;backface-visibility:hidden}
-#intro.out{opacity:0}
+#intro.out{pointer-events:none}
 @media (min-width:768px){#intro{--lw:178px}}
 
 /* 序幕：左右兩片黑幕，邊緣各一道金線，往兩側拉開 */
@@ -105,7 +105,7 @@ html.intro-playing .rule-grow{animation-delay:calc(2.9s + var(--d,0ms)) !importa
   #intro.out .panel.l,#intro.out .panel.r{transform:none !important;opacity:0}
 }
 </style>
-<link rel="stylesheet" href="assets/css/style.css?v=20261203a">
+<link rel="stylesheet" href="assets/css/style.css?v=20261203b">
 </head>
 <body id="top" class="font-sans text-ink antialiased">
 
@@ -343,10 +343,10 @@ html.intro-playing .rule-grow{animation-delay:calc(2.9s + var(--d,0ms)) !importa
 
 <div id="toast" class="pointer-events-none fixed left-1/2 top-20 z-[70] hidden -translate-x-1/2 bg-ink px-6 py-3 text-[12px] tracking-[.14em] text-white/95"></div>
 
-<script src="js/config.js?v=20261203a"></script>
-<script src="js/data.js?v=20261203a"></script>
-<script src="js/app.js?v=20261203a"></script>
-<script src="js/lightbox.js?v=20261203a"></script>
+<script src="js/config.js?v=20261203b"></script>
+<script src="js/data.js?v=20261203b"></script>
+<script src="js/app.js?v=20261203b"></script>
+<script src="js/lightbox.js?v=20261203b"></script>
 <script src="js/auto-reload.js"></script>
 <script>
 (function(){
