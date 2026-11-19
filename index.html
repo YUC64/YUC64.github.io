@@ -57,6 +57,8 @@ html.intro-playing .rule-grow{animation-delay:calc(2.9s + var(--d,0ms)) !importa
 @media (min-width:768px){#intro .stage{gap:19px}}
 #intro.out .stage{opacity:0}
 
+.markwrap,.markwrap *,.markwrap *::before,.markwrap *::after{outline:0 !important;border:0 !important;
+  box-shadow:none !important;-webkit-appearance:none;appearance:none;forced-color-adjust:none}
 .markwrap{position:relative;width:104px;height:104px;display:grid;place-items:center}
 @media (min-width:768px){.markwrap{width:132px;height:132px}}
 .markwrap::before{content:"";position:absolute;inset:-30%;border-radius:50%;pointer-events:none;
@@ -66,7 +68,7 @@ html.intro-playing .rule-grow{animation-delay:calc(2.9s + var(--d,0ms)) !importa
   animation:fadeIn .45s ease .45s forwards}
 .ring circle{fill:none;stroke:#C6A46B;stroke-width:1;stroke-linecap:round;
   stroke-dasharray:453;stroke-dashoffset:453;animation:drawRing 1.55s ease-out .5s forwards}
-.mark{width:56%;height:56%;background:url(assets/img/logo-mark.png?v=20261205a) center/contain no-repeat;
+.mark{width:56%;height:56%;background:url(assets/img/logo-mark.png?v=20261205b) center/contain no-repeat;
   opacity:0;transform:scale(.93);border:0;outline:0;
   animation:markIn 1.15s cubic-bezier(.16,1,.3,1) .12s forwards;will-change:transform,opacity}
 
@@ -141,7 +143,7 @@ html.intro-playing .rule-grow{animation-delay:calc(2.9s + var(--d,0ms)) !importa
   #intro.out .panel.l,#intro.out .panel.r{transform:none !important;opacity:0}
 }
 </style>
-<link rel="stylesheet" href="assets/css/style.css?v=20261205a">
+<link rel="stylesheet" href="assets/css/style.css?v=20261205b">
 </head>
 <body id="top" class="font-sans text-ink antialiased">
 
@@ -381,10 +383,10 @@ html.intro-playing .rule-grow{animation-delay:calc(2.9s + var(--d,0ms)) !importa
 
 <div id="toast" class="pointer-events-none fixed left-1/2 top-20 z-[70] hidden -translate-x-1/2 bg-ink px-6 py-3 text-[12px] tracking-[.14em] text-white/95"></div>
 
-<script src="js/config.js?v=20261205a"></script>
-<script src="js/data.js?v=20261205a"></script>
-<script src="js/app.js?v=20261205a"></script>
-<script src="js/lightbox.js?v=20261205a"></script>
+<script src="js/config.js?v=20261205b"></script>
+<script src="js/data.js?v=20261205b"></script>
+<script src="js/app.js?v=20261205b"></script>
+<script src="js/lightbox.js?v=20261205b"></script>
 <script src="js/auto-reload.js"></script>
 <script>
 (function(){
