@@ -230,7 +230,7 @@
           <div><dt class="inline text-ink-mute">總計：</dt><dd class="inline mono font-medium">${money(o.total)}</dd></div>
           <div><dt class="inline text-ink-mute">用餐時段：</dt><dd class="inline">
             <select data-slot-for="${esc(o.orderId)}" class="w-auto cursor-pointer border border-[rgba(23,20,15,.25)] bg-white font-bold outline-none" style="padding:.3rem 1.6rem .3rem .6rem;font-size:12px">
-              ${['', '17:00', '17:15', '17:30', '17:45', '18:00', '18:30', '19:00', '19:15', '19:30', '19:45', '20:00'].map((v) => `<option value="${v}"${(o.slot || '') === v ? ' selected' : ''}>${v || '未指定'}</option>`).join('')}
+              ${['', '17:00', '19:30'].map((v) => `<option value="${v}"${(o.slot || '') === v ? ' selected' : ''}>${v || '未指定'}</option>`).join('')}
             </select>
           </dd></div>
           <div class="sm:col-span-2"><dt class="inline text-ink-mute">車號：</dt><dd class="inline font-bold">${esc(o.car) || '—'}</dd></div>
