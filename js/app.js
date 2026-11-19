@@ -649,9 +649,9 @@ function renderCart() {
     </div>
     <button id="btnCheckout" ${canCheckout || !loggedIn() ? '' : 'disabled'}
       class="btn mt-4 w-full text-[11.5px] ${canCheckout || !loggedIn() ? 'btn-solid' : 'btn-line is-disabled'}">
-      ${!loggedIn() ? '登入' : (alcLocked() ? '請先選擇套餐' : '前往確認訂購資料')}
+      ${!loggedIn() ? '登入' : (alcLocked() ? '請先選擇套餐' : '前往確認點餐資料')}
     </button>
-    <p class="mt-3 text-center text-[9.5px] tracking-[.16em] text-ink-mute">送出即代表同意門市訂購規則・現場結帳</p>`;
+    <p class="mt-3 text-center text-[9.5px] tracking-[.16em] text-ink-mute">送出即代表同意門市點餐規則・現場結帳</p>`;
 
   $('#cartCountTop').textContent = c.count;
   $('#cartCountTop').classList.toggle('hidden', !c.count);
@@ -925,12 +925,12 @@ function doLogout() {
   toast('已登出，登出後只能瀏覽菜單');
 }
 
-/** 訂購說明（原本佔版面的說明文字，收進選單的彈窗） */
+/** 點餐說明（原本佔版面的說明文字，收進選單的彈窗） */
 function openGuide() {
   const sp = '<img src="assets/img/spicy.png" alt="辣" class="inline-block h-3.5 w-auto align-[-2px]">';
   openModal(`
     <div class="flex items-start justify-between border-b border-ink/10 px-5 py-3">
-      <h3 class="text-lg font-black">訂購說明</h3>
+      <h3 class="text-lg font-black">點餐說明</h3>
       <button data-close-modal class="grid h-9 w-9 place-items-center rounded-full bg-ink/5 hover:bg-ink/10" aria-label="關閉">✕</button>
     </div>
     <ol class="space-y-2 px-5 py-4 text-[13px] leading-relaxed text-ink-soft list-decimal pl-9">
@@ -940,7 +940,7 @@ function openGuide() {
       <li>套餐內每個品類都需依「<b>選 N</b>」規則選滿（含飲料）；飲料可依杯選擇<b>冰／去冰／熱</b>。</li>
       <li>辣度依門市菜單標示：${sp}${sp} 較辣・${sp} 微辣・未標示者為不辣。</li>
       <li>甜點與飲料可選<b>冰／去冰／冷／熱</b>（摩摩喳喳：冰／去冰；椰香黑糯米：冷／熱；泰式奶茶：冰／去冰／熱）。</li>
-      <li>完成訂購後畫面會顯示<b>訂單編號</b>；之後用同一支手機＋驗證碼登入，可在「我的餐點」<b>修改或取消</b>。</li>
+      <li>完成點餐後畫面會顯示<b>訂單編號</b>；之後用同一支手機＋驗證碼登入，可在「我的餐點」<b>修改或取消</b>。</li>
       <li>本頁為預先點餐登記，<b>不含線上結帳與金流</b>，款項請於現場結清。</li>
       <li>僅供參考，菜單內容以現場供應為主。</li>
     </ol>
@@ -989,7 +989,7 @@ function renderMember() {
     <nav class="mt-6 border-t border-[rgba(23,20,15,.12)]">
       <a href="#sets" data-drawer-close class="flex items-center justify-between border-b border-[rgba(23,20,15,.08)] py-3.5 text-[12.5px] tracking-[.12em] transition hover:text-gold">春節多人套餐 <span class="text-ink-mute">›</span></a>
       <a href="#alacarte" data-drawer-close class="flex items-center justify-between border-b border-[rgba(23,20,15,.08)] py-3.5 text-[12.5px] tracking-[.12em] transition hover:text-gold">單點加點 <span class="text-ink-mute">›</span></a>
-      <button data-menu-action="guide" class="flex w-full items-center justify-between border-b border-[rgba(23,20,15,.08)] py-3.5 text-left text-[12.5px] tracking-[.12em] transition hover:text-gold">訂購說明 <span class="text-ink-mute">›</span></button>
+      <button data-menu-action="guide" class="flex w-full items-center justify-between border-b border-[rgba(23,20,15,.08)] py-3.5 text-left text-[12.5px] tracking-[.12em] transition hover:text-gold">點餐說明 <span class="text-ink-mute">›</span></button>
       ${loggedIn() ? `<button data-menu-action="cart" class="flex w-full items-center justify-between border-b border-[rgba(23,20,15,.08)] py-3.5 text-left text-[12.5px] tracking-[.12em] transition hover:text-gold">訂單內容 <span class="text-ink-mute">›</span></button>` : ''}
     </nav>
     <div class="mt-7 border-t border-[rgba(23,20,15,.12)] pt-5 text-[10.5px] leading-[2] tracking-[.06em] text-ink-mute">
@@ -998,7 +998,7 @@ function renderMember() {
       <p>・除夕內用須先點選任一春節多人套餐，才能單點加點</p>
       <p>・送出後僅供檢視；如需更改請聯繫門市為您開啟修改</p>
       <p>・不含線上結帳，款項請於現場結清</p>
-      ${CFG.brand.phone ? `<p class="mt-2 font-bold text-ink-soft">訂購專線 ${esc(CFG.brand.phone)}</p>` : ''}
+      ${CFG.brand.phone ? `<p class="mt-2 font-bold text-ink-soft">點餐專線 ${esc(CFG.brand.phone)}</p>` : ''}
     </div>
     <p class="mt-7 text-center"><a href="staff.html" class="text-[9.5px] tracking-[.24em] text-ink-mute/60 transition hover:text-ink-mute">員工專用</a></p>`;
 }
@@ -1110,7 +1110,7 @@ function renderMyOrders(list, offline) {
         renderAll();
         toggleCart(true);
         toast(o.cart
-          ? '已載入原訂單內容，改好後按「前往確認訂購資料」重新送出'
+          ? '已載入原訂單內容，改好後按「前往確認點餐資料」重新送出'
           : '此訂單沒有可載入的內容，請重新選擇菜色後送出', 4200);
       }));
       $$('[data-cancel-order]', root).forEach((b) => b.addEventListener('click', () => {
@@ -1132,7 +1132,7 @@ function openCheckout() {
     <div class="flex items-start justify-between border-b border-[rgba(23,20,15,.1)] px-6 py-5">
       <div>
         <p class="caps">Order</p>
-        <h3 class="serif mt-2 text-[19px] tracking-[.14em]">確認訂購資料</h3>
+        <h3 class="serif mt-2 text-[19px] tracking-[.14em]">確認點餐資料</h3>
         <p class="mt-2 text-[11px] tracking-[.08em] text-ink-mute">${S.editing ? `修改訂單 ${esc(S.editing)}` : '送出後我們會替您備餐'}</p>
       </div>
       <button data-close-modal class="grid h-8 w-8 shrink-0 place-items-center text-ink/40 transition hover:text-ink" aria-label="關閉">
@@ -1360,7 +1360,7 @@ function showSuccess(record, delivered) {
   openModal(`
     <div class="px-5 py-6 text-center">
       <p class="tick mx-auto grid h-16 w-16 place-items-center rounded-full bg-thai-green text-3xl text-white">✓</p>
-      <h3 class="mt-3 text-xl font-black">訂購成功！</h3>
+      <h3 class="mt-3 text-xl font-black">點餐成功！</h3>
       <p class="mt-1 text-sm text-ink-mute">${record.status === '修改訂單' ? '訂單內容已更新，' : ''}我們已收到您的預訂內容</p>
       <div class="mt-4 rounded-2xl bg-[#F7F4EC] p-4 text-left text-[13px]">
         <p class="text-[11px] font-black text-ink-mute">訂單編號</p>
@@ -1398,7 +1398,7 @@ function loadOrderForEdit(orderId) {
   closeModal();
   renderAll();
   toggleCart(true);
-  toast('已載入原訂單內容，修改後按「前往確認訂購資料」重新送出');
+  toast('已載入原訂單內容，修改後按「前往確認點餐資料」重新送出');
 }
 
 async function cancelOrder(orderId) {
@@ -1579,7 +1579,7 @@ function renderAll() {
 
 function init() {
   if (CFG.brand.phone) {
-    $('#footContact').textContent = `訂購專線 ${CFG.brand.phone}${CFG.brand.address ? '・' + CFG.brand.address : ''}`;
+    $('#footContact').textContent = `點餐專線 ${CFG.brand.phone}${CFG.brand.address ? '・' + CFG.brand.address : ''}`;
   }
   const dl = CFG.orders.deadline ? new Date(CFG.orders.deadline) : null;
   if (dl && Date.now() > dl.getTime()) {
